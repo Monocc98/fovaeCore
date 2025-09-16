@@ -1,5 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { HomeResponse } from "../types/ge-home.response";
+import type { HomeResponse } from "../types/get-home.response";
 
 
 export const getHomeAction = async():Promise<HomeResponse> => {

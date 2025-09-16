@@ -12,10 +12,14 @@ import { CustomBreadcrumb } from "@/components/custom/CustomBreadcrumb";
 export const DashboardConfig = () => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <CustomBreadcrumb />
+      <div className="flex items-center justify-between mb-4">
+        <CustomBreadcrumb />
+        {/* Optional: Last updated info */}
+        <div className="text-xs text-gray-500">
+          Última actualización: {new Date().toLocaleDateString("es-ES")}
         </div>
+      </div>
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           {/* Fiscal Year Selector */}
           <div className="flex items-center gap-2">
@@ -48,11 +52,6 @@ export const DashboardConfig = () => {
           </Label>
           <Switch id="family-mode" />
         </div>
-
-        {/* Optional: Last updated info */}
-        {/* <div className="text-xs text-gray-500">
-          Última actualización: {new Date().toLocaleDateString("es-ES")}
-        </div> */}
       </div>
     </div>
   );

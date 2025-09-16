@@ -4,10 +4,13 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbSeparator,
-  BreadcrumbPage,
 } from "../ui/breadcrumb";
 
-export const CustomBreadcrumb = () => {
+interface Props {
+  currentPage: string;
+}
+
+export const CustomBreadcrumb = ({ currentPage }: Props) => {
   return (
     <Breadcrumb>
       <BreadcrumbList>
@@ -16,11 +19,7 @@ export const CustomBreadcrumb = () => {
         </BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
-          <BreadcrumbLink href="/components">Components</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>Breadcrumb</BreadcrumbPage>
+          <BreadcrumbLink>{currentPage}</BreadcrumbLink>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>

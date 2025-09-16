@@ -37,6 +37,8 @@ export const HomePage = () => {
     return <div>Cargando...</div>;
   }
 
+  console.log(homeResponse);
+
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList
@@ -64,7 +66,7 @@ export const HomePage = () => {
             {/* Left Column - 2 cards stacked */}
             <div className="col-span-3 space-y-6">
               <InfoCard
-                title="Cuentas"
+                title="Empresas"
                 icon={<Building2 className="w-5 h-5 text-gray-400" />}
               >
                 <AccountsCard companies={group.companies} />
@@ -74,7 +76,7 @@ export const HomePage = () => {
                 title="Resumen Financiero"
                 icon={<Calculator className="w-5 h-5 text-gray-400" />}
               >
-                <FinancialSummary />
+                <FinancialSummary totalBalance={group.totalBalance} />
               </InfoCard>
             </div>
             {/* Center Column - Large card */}

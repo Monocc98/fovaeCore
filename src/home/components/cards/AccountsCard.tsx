@@ -31,14 +31,16 @@ export const AccountsCard = ({ companies }: Props) => {
         <div
           key={company._id}
           className={`flex items-center justify-between p-3 rounded-lg border ${getBalanceColor(
-            100
+            company.totalBalance
           )}`}
         >
           <div className="flex items-center space-x-3">
-            {getBalanceIcon(100)}
+            {getBalanceIcon(company.totalBalance)}
             <span className="font-medium text-sm">{company.name}</span>
           </div>
-          <span className="font-semibold text-sm">{formatCurrency(100)}</span>
+          <span className="font-semibold text-sm">
+            {formatCurrency(company.totalBalance)}
+          </span>
         </div>
       ))}
     </div>
