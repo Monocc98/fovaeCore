@@ -1,5 +1,8 @@
+import type { Account } from "./account.interface";
+
 export interface Company {
     _id:  string;
     name: string;
-    totalBalance: number;
+    balance: number;
+    accounts: Account[];
 }

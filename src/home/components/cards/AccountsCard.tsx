@@ -1,48 +1,43 @@
 import type { Company } from "@/home/types/comany.interface";
-import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
+import { CompanyCards } from "./ui/CompanyCards";
+import type { Account } from "@/home/types/account.interface";
+
 interface Props {
-  companies: Company[];
+  content?: Company[] | Account[] | undefined;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
-
-function getBalanceColor(balance: number): string {
-  if (balance > 0) return "text-emerald-600 bg-emerald-50 border-emerald-200";
-  if (balance < 0) return "text-red-600 bg-red-50 border-red-200";
-  return "text-amber-600 bg-amber-50 border-amber-200";
-}
-
-function getBalanceIcon(balance: number) {
-  if (balance > 0) return <TrendingUp className="w-4 h-4" />;
-  if (balance < 0) return <TrendingDown className="w-4 h-4" />;
-  return <DollarSign className="w-4 h-4" />;
-}
-
-export const AccountsCard = ({ companies }: Props) => {
+export const AccountsCard = ({ content = [] }: Props) => {
   return (
     <div className="space-y-3">
-      {companies.map((company) => (
-        <div
-          key={company._id}
-          className={`flex items-center justify-between p-3 rounded-lg border ${getBalanceColor(
-            company.totalBalance
-          )}`}
-        >
-          <div className="flex items-center space-x-3">
-            {getBalanceIcon(company.totalBalance)}
-            <span className="font-medium text-sm">{company.name}</span>
+      {content.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <div className="w-16 h-16 mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
+            </svg>
           </div>
-          <span className="font-semibold text-sm">
-            {formatCurrency(company.totalBalance)}
-          </span>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            No hay cuentas disponibles
+          </h3>
+          <p className="text-sm text-gray-500 max-w-sm">
+            No se encontraron cuentas para la empresa seleccionada.
+          </p>
         </div>
-      ))}
+      ) : (
+        content.map((content) => (
+          <CompanyCards key={content._id} content={content} />
+        ))
+      )}
     </div>
   );
 };

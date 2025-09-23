@@ -7,13 +7,16 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CustomBreadcrumb } from "@/components/custom/CustomBreadcrumb";
+import { useHomeStore } from "../hooks/useHomeStore";
+// import { CustomBreadcrumb } from "@/components/custom/CustomBreadcrumb";
 
 export const DashboardConfig = () => {
+  const { mode } = useHomeStore();
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
       <div className="flex items-center justify-between mb-4">
-        <CustomBreadcrumb />
+        {/* <CustomBreadcrumb /> */}
         {/* Optional: Last updated info */}
         <div className="text-xs text-gray-500">
           Última actualización: {new Date().toLocaleDateString("es-ES")}
@@ -43,15 +46,17 @@ export const DashboardConfig = () => {
           </div>
         </div>
         {/* Family Switch */}
-        <div className="flex items-center gap-2">
-          <Label
-            htmlFor="family-mode"
-            className="text-sm font-medium text-gray-700"
-          >
-            Family
-          </Label>
-          <Switch id="family-mode" />
-        </div>
+        {mode !== "account" && (
+          <div className="flex items-center gap-2">
+            <Label
+              htmlFor="family-mode"
+              className="text-sm font-medium text-gray-700"
+            >
+              Family
+            </Label>
+            <Switch id="family-mode" />
+          </div>
+        )}
       </div>
     </div>
   );

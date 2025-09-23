@@ -1,5 +1,5 @@
 interface Props {
-  totalBalance: number;
+  balance?: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -10,14 +10,14 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export const FinancialSummary = ({ totalBalance }: Props) => {
+export const FinancialSummary = ({ balance = 0 }: Props) => {
   return (
     <div className="space-y-4">
       <div className="bg-blue-50 p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm text-blue-700">Balance Total</span>
           <span className="font-bold text-lg text-blue-900">
-            {formatCurrency(totalBalance)}
+            {formatCurrency(balance)}
           </span>
         </div>
       </div>
