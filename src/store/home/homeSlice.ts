@@ -20,6 +20,13 @@ const initialState: HomeState = {
   activeAccountId: null,
 };
 
+type HomeSnapshot = {
+  mode: Mode;
+  activeGroupId?: string | null;
+  activeCompanyId?: string | null;
+  activeAccountId?: string | null;
+};
+
 export const homeSlice = createSlice({
   name: 'home',
   initialState,
@@ -78,10 +85,19 @@ export const homeSlice = createSlice({
       if(state.mode === 'company') state.activeCompanyId = action.payload.activeId;
       if(state.mode === 'account') state.activeAccountId = action.payload.activeId;
     },
+    onRestoreHomeSnapshot(state, action: PayloadAction<HomeSnapshot>) {
+      const { mode, activeGroupId = null, activeCompanyId = null, activeAccountId = null } =
+        action.payload;
+
+      state.mode = mode;
+      state.activeGroupId = activeGroupId;
+      state.activeCompanyId = activeCompanyId;
+      state.activeAccountId = activeAccountId;
+    },
   },
 })
 
 // Action creators are generated for each case reducer function
-export const { onInitFormHome, onChangeLevelUp, onChangeLevelDown, onChangeTab, onResetHome } = homeSlice.actions
+export const { onInitFormHome, onChangeLevelUp, onChangeLevelDown, onChangeTab, onResetHome, onRestoreHomeSnapshot } = homeSlice.actions
 
 export default homeSlice.reducer

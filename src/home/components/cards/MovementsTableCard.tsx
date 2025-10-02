@@ -1,183 +1,278 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import type { Movement } from "@/home/types/movement.interface";
 import {
-  ArrowDownLeft,
-  ArrowUpRight,
-  Edit,
-  Eye,
-  ListPlus,
-  Search,
-  Trash2,
-} from "lucide-react";
+  formatCurrency,
+  formatDate,
+  getStatusBadge,
+  getTransactionColor,
+  getTransactionIcon,
+} from "@/helpers";
+import { deleteMovementAction } from "@/home/actions/movements.actions";
+import { useHomeStore } from "@/home/hooks/useHomeStore";
+import type { Movement } from "@/home/types/movement.interface";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
+import { useDeferredValue, useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
+import type { MovementsFilters } from "@/home/types/movements-filters.interface";
 
 interface Props {
   movements?: Movement[];
+  filters: MovementsFilters;
+  onChangeFilters: (next: MovementsFilters) => void;
 }
 
-function formatDate(dateString: string | Date): string {
-  return new Date(dateString).toLocaleDateString("es-MX", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
+export const MovementsTableCard = ({
+  movements = [],
+  filters,
+  onChangeFilters,
+}: Props) => {
+  const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
+    null
+  );
+
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Normaliza texto: minúsculas, sin acentos, sin espacios extra
+  const normalize = (v: unknown) =>
+    String(v ?? "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .trim();
+
+  // Para que el UI no "salte" mientras se escribe
+  const deferredSearch = useDeferredValue(searchTerm);
+  const normalizedQuery = normalize(deferredSearch);
+
+  const queryClient = useQueryClient();
+
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteMovementAction(id),
+    onSuccess: (_data, _id) => {
+      // refresca la lista
+      queryClient.invalidateQueries({ queryKey: ["movementsOverlay"] });
+      setMovementToDelete(null);
+    },
   });
-}
 
-function getTransactionIcon(amount: number, transferId: string = "") {
-  if (transferId === "") {
-    if (amount > 0) return <ArrowUpRight className="w-4 h-4 text-green-600" />;
-    if (amount < 0) return <ArrowDownLeft className="w-4 h-4 text-red-600" />;
-  } else {
-    return <ArrowUpRight className="w-4 h-4 text-blue-600" />;
-  }
-}
+  const setFilter = <K extends keyof MovementsFilters>(
+    k: K,
+    v: MovementsFilters[K]
+  ) => onChangeFilters({ ...filters, [k]: v });
 
-function getTransactionColor(amount: number, transferId: string = "") {
-  if (transferId === "") {
-    if (amount > 0) return "text-green-600";
-    if (amount < 0) return "text-red-600";
-  } else {
-    return "text-blue-600";
-  }
-}
+  const deferredQ = useDeferredValue(filters.q);
+  const q = normalize(deferredQ);
 
-function getStatusBadge(status: string) {
-  const baseClasses = "px-2 py-1 rounded-full text-xs font-medium";
-  switch (status) {
-    case "completed":
-      return (
-        <span className={`${baseClasses} bg-green-100 text-green-800`}>
-          Completado
-        </span>
+  // Filtrar por descripción, comentario y (opcional) sub-subcategoría
+  const filteredMovements = useMemo(() => {
+    let rows = movements;
+
+    // texto (desc / comment / subsub)
+    if (q) {
+      rows = rows.filter((m) =>
+        [m.description, (m as any).comment, m.subsubcategory?.name].some((f) =>
+          normalize(f).includes(q)
+        )
       );
-    case "pending":
-      return (
-        <span className={`${baseClasses} bg-yellow-100 text-yellow-800`}>
-          Pendiente
-        </span>
-      );
-    case "cancelled":
-      return (
-        <span className={`${baseClasses} bg-red-100 text-red-800`}>
-          Cancelado
-        </span>
-      );
-    default:
-      return (
-        <span className={`${baseClasses} bg-gray-100 text-gray-800`}>
-          Desconocido
-        </span>
-      );
-  }
-}
+    }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("es-MX", {
-    style: "currency",
-    currency: "MXN",
-    minimumFractionDigits: 2,
-  }).format(amount);
-}
+    // tipo IN/OUT
+    if (filters.type !== "ALL") {
+      rows = rows.filter((m) =>
+        filters.type === "INCOME" ? m.amount > 0 : m.amount < 0
+      );
+    }
 
-export const MovementsTableCard = ({ movements = [] }: Props) => {
+    // estado (si lo tienes en tu modelo; aquí asumo "completed" / "pending")
+    // if (filters.status !== "ALL") {
+    //   rows = rows.filter((m) =>
+    //     filters.status === "completed"
+    //       ? m.status === "completed"
+    //       : m.status === "pending"
+    //   );
+    // }
+
+    // fechas
+    const from = filters.dateFrom
+      ? new Date(filters.dateFrom + "T00:00:00")
+      : undefined;
+    const to = filters.dateTo
+      ? new Date(filters.dateTo + "T23:59:59")
+      : undefined;
+
+    if (from) rows = rows.filter((m) => new Date(m.occurredAt) >= from);
+    if (to) rows = rows.filter((m) => new Date(m.occurredAt) <= to);
+
+    // monto mínimo
+    if (typeof filters.minAmount === "number") {
+      rows = rows.filter((m) => Math.abs(m.amount) >= filters.minAmount!);
+    }
+
+    return rows;
+  }, [movements, q, filters]);
+
+  const navigate = useNavigate();
+  const { mode, activeGroupId, activeCompanyId, activeAccountId } =
+    useHomeStore();
+
+  const handleNewMovimiento = () => {
+    navigate(`/movement/new/${activeAccountId}`, {
+      state: {
+        homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
+      },
+    });
+  };
+
+  const handleEditMovement = (idMovement: string) => {
+    navigate(`movement/${idMovement}/edit`, {
+      state: {
+        homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
+      },
+    });
+  };
+
+  const handleDeleteClick = (movement: Movement) => {
+    setMovementToDelete(movement); // abrir modal
+  };
+
+  const cancelDelete = () => setMovementToDelete(null);
+
+  const confirmDelete = () => {
+    if (!movementToDelete) return;
+    deleteMut.mutate(movementToDelete.id);
+  };
+
   return (
-    <Card className="h-fit">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Movimientos Financieros
-            </h3>
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Buscar movimientos..."
-                  // value={searchTerm}
-                  // onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                />
+    <>
+      <Card className="h-fit">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Movimientos Financieros
+              </h3>
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Buscar movimientos..."
+                    value={filters.q}
+                    onChange={(e) => setFilter("q", e.target.value)}
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
               </div>
+              <ListPlus
+                className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
+                onClick={handleNewMovimiento}
+              />
             </div>
-            {/* //TODO Cambiar a un refresh para volver a pedir los movimientos */}
-            <ListPlus className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors" />
-          </div>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="overflow-auto h-[calc(100%-120px)]">
-          <table className="w-full">
-            <thead className="bg-gray-50 sticky top-0">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fecha
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Descripción
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Monto
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {movements.map((movement) => (
-                <tr
-                  key={movement.id}
-                  className="hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {formatDate(movement.occurredAt)}
-                  </td>
-                  <td className="px-4 py-4 text-sm text-gray-900">
-                    <div className="flex items-center space-x-2">
-                      {getTransactionIcon(movement.amount, movement.transferId)}
-                      <div className="truncate max-w-xs">
-                        {movement.description}
-                        <div className="text-xs text-gray-500">
-                          {movement.category.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="overflow-auto h-[calc(100%-120px)]">
+            <table className="w-full">
+              <thead className="bg-gray-50 sticky top-0">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Fecha
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Descripción
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Monto
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Estado
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Acciones
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredMovements.map((movement) => (
+                  <tr
+                    key={movement.id}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatDate(movement.occurredAt)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-gray-900">
+                      <div className="flex items-center space-x-2">
+                        {getTransactionIcon(
+                          movement.amount,
+                          movement.transferId
+                        )}
+                        <div className="truncate max-w-xs">
+                          {movement.description}
+                          <div className="text-xs text-gray-500">
+                            {movement.subsubcategory.name}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                    <span
-                      className={getTransactionColor(
-                        movement.amount,
-                        movement.transferId
-                      )}
-                    >
-                      {formatCurrency(movement.amount)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    {getStatusBadge("completed")}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div className="flex items-center space-x-2">
-                      <button className="p-1 text-blue-600 hover:text-blue-800 transition-colors">
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
+                      <span
+                        className={getTransactionColor(
+                          movement.amount,
+                          movement.transferId
+                        )}
+                      >
+                        {formatCurrency(movement.amount)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {getStatusBadge("completed")}
+                    </td>
+                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <div className="flex items-center space-x-2">
+                        {/* <button className="p-1 text-blue-600 hover:text-blue-800 transition-colors">
                         <Eye className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-green-600 hover:text-green-800 transition-colors">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="p-1 text-red-600 hover:text-red-800 transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                      </button> */}
+                        <button
+                          className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                          onClick={() => handleEditMovement(movement.id)}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button className="p-1 text-red-600 hover:text-red-800 transition-colors">
+                          <Trash2
+                            className="w-4 h-4"
+                            onClick={() => handleDeleteClick(movement)}
+                          />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredMovements.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="px-4 py-6 text-center text-sm text-gray-500"
+                    >
+                      No se encontraron movimientos.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+      {movementToDelete && (
+        <DeleteMovementAlert
+          movement={movementToDelete}
+          onCancel={cancelDelete}
+          onConfirm={confirmDelete}
+          isLoading={deleteMut.isPending}
+        />
+      )}
+    </>
   );
 };

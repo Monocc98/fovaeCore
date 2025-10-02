@@ -1,5 +1,5 @@
 import { useDispatch } from "react-redux"
-import { onChangeLevelDown, onChangeLevelUp, onChangeTab, onInitFormHome, onResetHome } from "@/store/home/homeSlice";
+import { onChangeLevelDown, onChangeLevelUp, onChangeTab, onInitFormHome, onResetHome, onRestoreHomeSnapshot } from "@/store/home/homeSlice";
 import type { HomeResponse } from "../types/get-home.response";
 import { useAppSelector } from "./types/homeHook.type";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,6 +70,14 @@ export const useHomeStore = () => {
             ? companies.map( company => ({ id: company._id, name: company.name, content: currentCompany?.accounts, balance: currentCompany?.balance }) )
             : accounts.map( account => ({ id: account._id, name: account.name, content: [], balance: account.balance }) )
 
+    const restoreHomeSnapshot = (snap: {
+        mode: "group" | "company" | "account";
+        activeGroupId?: string | null;
+        activeCompanyId?: string | null;
+        activeAccountId?: string | null;
+    }) => {
+        dispatch(onRestoreHomeSnapshot(snap));
+    };
 
     return {
         // Props
@@ -92,6 +100,7 @@ export const useHomeStore = () => {
         changeLevelUp,
         changeLevelDown,
         refreshHome,
+        restoreHomeSnapshot,
     }
 
 }
