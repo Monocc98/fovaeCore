@@ -7,178 +7,24 @@ import type {
   Subsubcategory,
 } from "@/home/types/categories.interfaces";
 import type { Budget } from "@/home/types/budget.interface";
+import { useQuery } from "@tanstack/react-query";
+import { useParams } from "react-router";
+import { getCategoriesOverloadAction } from "@/home/actions/categories.actions";
 
 export interface MonthlyBudget {
   [month: number]: number; // { 1: 1000, 2: 0, ... }
 }
 
-// Nodo union: agrega un campo kind para saber el nivel
 export type NodeBase =
   | ({ kind: "CATEGORY" } & Category)
   | ({ kind: "SUBCATEGORY" } & Subcategory)
   | ({ kind: "SUBSUBCATEGORY" } & Subsubcategory);
 
 export type CategoryWithBudgets = NodeBase & {
-  budgets: MonthlyBudget; // solo se llena en hojas; en intermedios se calcula al vuelo
+  budgets: MonthlyBudget;
   children?: CategoryWithBudgets[];
-  total?: number; // suma anual (12 meses o suma hijos)
+  total?: number;
 };
-
-export function buildHierarchyFromNested(
-  categories: Category[] = [],
-  budgetsByLeaf: Record<string, MonthlyBudget> = {}
-): CategoryWithBudgets[] {
-  const toLeaf = (leaf: Subsubcategory): CategoryWithBudgets => ({
-    kind: "SUBSUBCATEGORY",
-    ...leaf,
-    budgets: budgetsByLeaf[leaf._id] || {},
-    children: [],
-    total: 0,
-  });
-
-  const toSub = (sub: Subcategory): CategoryWithBudgets => {
-    const children = (sub.subsubcategories ?? []).map(toLeaf);
-    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0 };
-  };
-
-  const toCat = (cat: Category): CategoryWithBudgets => {
-    const children = (cat.subcategories ?? []).map(toSub);
-    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0 };
-  };
-
-  return categories.map(toCat);
-}
-
-/**
- * =============================
- *  Mock Data
- * =============================
- */
-const MOCK_CATEGORIES: Category[] = [
-  {
-    _id: "cat-1",
-    name: "Operación",
-    scope: "COMPANY",
-    company: "company-A",
-    type: "EXPENSE",
-  },
-  {
-    _id: "cat-2",
-    name: "Ventas",
-    scope: "COMPANY",
-    company: "company-A",
-    type: "INCOME",
-  },
-  {
-    _id: "cat-3",
-    name: "Marketing",
-    scope: "COMPANY",
-    company: "company-B",
-    type: "EXPENSE",
-  },
-];
-
-const MOCK_SUBCATEGORIES: Subcategory[] = [
-  {
-    _id: "sub-1",
-    name: "Servicios",
-    scope: "COMPANY",
-    parent: "cat-1",
-    company: "company-A",
-  },
-  {
-    _id: "sub-2",
-    name: "Nómina",
-    scope: "COMPANY",
-    parent: "cat-1",
-    company: "company-A",
-  },
-  {
-    _id: "sub-3",
-    name: "Online",
-    scope: "COMPANY",
-    parent: "cat-2",
-    company: "company-A",
-  },
-  {
-    _id: "sub-4",
-    name: "Publicidad",
-    scope: "COMPANY",
-    parent: "cat-3",
-    company: "company-B",
-  },
-];
-
-const MOCK_SUBSUBCATEGORIES: Subsubcategory[] = [
-  {
-    _id: "subsub-1",
-    name: "Internet",
-    scope: "COMPANY",
-    parent: "sub-1",
-    company: "company-A",
-  },
-  {
-    _id: "subsub-2",
-    name: "Luz",
-    scope: "COMPANY",
-    parent: "sub-1",
-    company: "company-A",
-  },
-  {
-    _id: "subsub-3",
-    name: "Salarios",
-    scope: "COMPANY",
-    parent: "sub-2",
-    company: "company-A",
-  },
-  {
-    _id: "subsub-4",
-    name: "Bonos",
-    scope: "COMPANY",
-    parent: "sub-2",
-    company: "company-A",
-  },
-  {
-    _id: "subsub-5",
-    name: "E-commerce",
-    scope: "COMPANY",
-    parent: "sub-3",
-    company: "company-A",
-  },
-  {
-    _id: "subsub-6",
-    name: "Facebook Ads",
-    scope: "COMPANY",
-    parent: "sub-4",
-    company: "company-B",
-  },
-  {
-    _id: "subsub-7",
-    name: "Google Ads",
-    scope: "COMPANY",
-    parent: "sub-4",
-    company: "company-B",
-  },
-];
-
-// Un puñado de budgets (algunos meses vacíos = 0)
-const MOCK_BUDGETS: Budget[] = [
-  // company-A (hojas cat-1)
-  {
-    id: "b-1",
-    year: 2025,
-    month: 1,
-    subsubcategory: {
-      _id: "subsub-1",
-      name: "Internet",
-      scope: "COMPANY",
-      parent: "sub-1",
-      company: "company-A",
-    },
-    amount: 444,
-    account: "company-A",
-  },
-];
 
 /**
  * =============================
@@ -199,78 +45,6 @@ const MONTHS = [
   "Noviembre",
   "Diciembre",
 ];
-
-/**
- * =============================
- *  Builder del árbol
- * =============================
- */
-function buildHierarchy(
-  categories: Category[],
-  subcategories: Subcategory[],
-  subsubs: Subsubcategory[],
-  budgets: Budget[],
-  fiscalYear: number
-): CategoryWithBudgets[] {
-  // budgets -> mapa por categoryId (subsub) y mes
-  const budgetsByCategory: Record<string, MonthlyBudget> = {};
-  budgets.forEach((b) => {
-    if (b.year !== fiscalYear) return;
-    if (!budgetsByCategory[b.subsubcategory._id])
-      budgetsByCategory[b.subsubcategory._id] = {};
-    budgetsByCategory[b.subsubcategory._id][b.month] =
-      (budgetsByCategory[b.subsubcategory._id][b.month] || 0) + b.amount;
-  });
-
-  // Índices por parent
-  const subcatsByCat = new Map<string, Subcategory[]>();
-  subcategories.forEach((s) => {
-    const arr = subcatsByCat.get(s.parent) || [];
-    arr.push(s);
-    subcatsByCat.set(s.parent, arr);
-  });
-
-  const subsubsBySub = new Map<string, Subsubcategory[]>();
-  subsubs.forEach((s) => {
-    const arr = subsubsBySub.get(s.parent) || [];
-    arr.push(s);
-    subsubsBySub.set(s.parent, arr);
-  });
-
-  const toLeafNode = (leaf: Subsubcategory): CategoryWithBudgets => ({
-    kind: "SUBSUBCATEGORY",
-    ...leaf,
-    budgets: budgetsByCategory[leaf._id] || {},
-    children: [],
-    total: 0,
-  });
-
-  const toSubcatNode = (sub: Subcategory): CategoryWithBudgets => {
-    const children = (subsubsBySub.get(sub._id) || []).map(toLeafNode);
-    return {
-      kind: "SUBCATEGORY",
-      ...sub,
-      budgets: {},
-      children,
-      total: 0,
-    };
-  };
-
-  const toCatNode = (cat: Category): CategoryWithBudgets => {
-    const children = (subcatsByCat.get(cat._id) || []).map(toSubcatNode);
-    return {
-      kind: "CATEGORY",
-      ...cat,
-      budgets: {},
-      children,
-      total: 0,
-    };
-  };
-
-  const root = categories.map(toCatNode);
-  calculateTotals(root);
-  return root;
-}
 
 /**
  * Calcula totales (anual) bottom-up y retorna el total del arreglo
@@ -302,19 +76,43 @@ function getMonthTotal(nodes: CategoryWithBudgets[], month: number): number {
   return sum;
 }
 
+/* ============================
+ * Builder ANIDADO (único a usar)
+ * ============================ */
+function buildHierarchyFromNested(
+  categories: Category[] = [],
+  budgetsByLeaf: Record<string, MonthlyBudget> = {}
+): CategoryWithBudgets[] {
+  const toLeaf = (leaf: Subsubcategory): CategoryWithBudgets => ({
+    kind: "SUBSUBCATEGORY",
+    ...leaf,
+    budgets: budgetsByLeaf[leaf._id] || {},
+    children: [],
+    total: 0,
+  });
+
+  const toSub = (sub: Subcategory): CategoryWithBudgets => {
+    const children = (sub.subsubcategories ?? []).map(toLeaf);
+    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0 };
+  };
+
+  const toCat = (cat: Category): CategoryWithBudgets => {
+    const children = (cat.subcategories ?? []).map(toSub);
+    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0 };
+  };
+
+  return categories.map(toCat);
+}
+
 /**
  * =============================
- *  Componente principal (Mock)
+ *  Componente principal
  * =============================
  */
-interface BudgetPageProps {
-  activeGroup?: string; // solo para header
-  fiscalYear?: number; // default 2025
-  // Si quieres inyectar data desde afuera, puedes pasarla
-  categories?: Category[];
-  subcategories?: Subcategory[];
-  subsubcategories?: Subsubcategory[];
-  budgets?: Budget[];
+interface Props {
+  activeGroup?: string;
+  fiscalYear?: number;
+  budgets?: Budget[];    // si no tienes server aún, puedes pasar []
   accountId?: string;
   onBack?: () => void;
 }
@@ -325,37 +123,37 @@ const levelColors = [
   "bg-yellow-50 border-yellow-200",
 ];
 
-export default function BudgetPageMock({
+export const BudgetPage = ({
   activeGroup = "Grupo Demo",
   fiscalYear = 2025,
-  categories = MOCK_CATEGORIES,
-  subcategories = MOCK_SUBCATEGORIES,
-  subsubcategories = MOCK_SUBSUBCATEGORIES,
-  budgets: incomingBudgets = MOCK_BUDGETS,
-  accountId = "company-A",
+  //budgets: incomingBudgets = [],
   onBack = () => {},
-}: BudgetPageProps) {
+}: Props) => {
   // Estado fuente de verdad de budgets (como si fuera tu DB)
-  const [budgets, setBudgets] = useState<Budget[]>(incomingBudgets);
+  //const [budgets, setBudgets] = useState<Budget[]>(incomingBudgets);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [editingCell, setEditingCell] = useState<{
-    nodeKey: string;
-    month: number;
-  } | null>(null);
+  const [editingCell, setEditingCell] = useState<{ nodeKey: string; month: number } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
-  // Construimos el árbol cada vez que cambian budgets o insumos
-  const tree = useMemo(
-    () =>
-      buildHierarchy(
-        categories,
-        subcategories,
-        subsubcategories,
-        budgets,
-        fiscalYear
-      ),
-    [categories, subcategories, subsubcategories, budgets, fiscalYear]
-  );
+  const { companyId, accountId } = useParams<{ companyId: string; accountId?: string }>();
+
+  // 1) Traer categorías anidadas por empresa
+const { data: catsResp, isLoading: catsLoading, isError: catsError, error } = useQuery({
+  queryKey: ["v2:company-categories", companyId],
+  queryFn: () => getCategoriesOverloadAction(companyId!),
+  enabled: !!companyId,
+  staleTime: 5 * 60 * 1000,
+  refetchOnWindowFocus: false,
+});
+
+const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]);
+
+ // 2) Construir árbol SIN budgets (budgetsByLeaf = {})
+  const tree = useMemo(() => {
+    const root = buildHierarchyFromNested(categories, {});
+    calculateTotals(root); // todos 0 por ahora
+    return root;
+  }, [categories]);
 
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]); // recalcula totales (defensivo)
 
@@ -365,6 +163,15 @@ export default function BudgetPageMock({
     if (next.has(key)) next.delete(key);
     else next.add(key);
     setExpanded(next);
+  };
+
+    const getMonthTotal = (nodes: CategoryWithBudgets[], month: number): number => {
+    let sum = 0;
+    for (const n of nodes) {
+      if (n.children && n.children.length) sum += getMonthTotal(n.children, month);
+      else sum += n.budgets[month] || 0; // siempre 0 por ahora
+    }
+    return sum;
   };
 
   const startEditing = (
@@ -392,7 +199,7 @@ export default function BudgetPageMock({
     return map;
   }, [categories]);
 
-  const saveBudget = () => {
+  /* const saveBudget = () => {
     if (!editingCell) return;
     const amount = parseFloat(editValue) || 0;
     const [kind, id] = editingCell.nodeKey.split(":");
@@ -400,7 +207,7 @@ export default function BudgetPageMock({
 
     const month = editingCell.month;
 
-    setBudgets((prev) => {
+   setBudgets((prev) => {
       // buscamos si existe un registro para esa hoja/mes/año
       const idx = prev.findIndex(
         (b) =>
@@ -432,7 +239,7 @@ export default function BudgetPageMock({
     });
 
     cancelEditing();
-  };
+  }; */
 
   const renderRow = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
     const hasChildren = !!(node.children && node.children.length);
@@ -504,14 +311,14 @@ export default function BudgetPageMock({
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") saveBudget();
+                          //if (e.key === "Enter") saveBudget();
                           if (e.key === "Escape") cancelEditing();
                         }}
                         className="w-24 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autoFocus
                       />
                       <button
-                        onClick={saveBudget}
+                        //onClick={saveBudget}
                         className="p-1 text-green-600 hover:bg-green-100 rounded"
                       >
                         <Save className="w-4 h-4" />

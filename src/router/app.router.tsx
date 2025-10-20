@@ -9,7 +9,7 @@ import { MovementsUpsertPage } from "@/home/pages/MovementsUpsertPage";
 import { HomeLayoutV2 } from "@/v2/home/layouts/HomeLayoutV2";
 import { createBrowserRouter, Navigate } from "react-router";
 import { CompanyLayout } from "@/v2/home/layouts/CompanyLayout";
-import BudgetPage from "@/budget/pages/BudgetPage";
+import { BudgetPage } from "@/budget/pages/BudgetPage";
 import { CategoriesPage } from "@/categories/pages/CategoriesPage";
 
 export const appRouter = createBrowserRouter([
