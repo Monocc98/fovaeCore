@@ -1,14 +1,15 @@
 import { Building2 } from "lucide-react";
 import { AdminCategoriesButton } from "../actionMenu/AdminCategoriesButton";
-import { useHomeStore } from "@/home/hooks/useHomeStore";
 import { BudgetButton } from "../actionMenu/BudgetButton";
 
-export const ActionMenu = () => {
-  const { mode } = useHomeStore();
+interface Props {
+  mode?: "groups" | "companies" | "accounts";
+}
 
+export const ActionMenu = ({ mode }: Props) => {
   return (
     <div className="space-y-3">
-      {mode === "account" ? (
+      {mode === "accounts" ? (
         <>
           <AdminCategoriesButton /> <BudgetButton />
         </>

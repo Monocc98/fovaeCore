@@ -1,13 +1,16 @@
 import { useHomeStore } from "@/home/hooks/useHomeStore";
 import { DollarSign } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
 export const BudgetButton = () => {
-  const { activeAccountId } = useHomeStore();
   const navigate = useNavigate();
+  const { companyId } = useParams<{ companyId: string }>();
+  const [searchParams] = useSearchParams();
+  const accountId = searchParams.get("a");
 
   const handleOnCLick = () => {
-    navigate(`/budget/${activeAccountId}`);
+    // const year = new Date().getFullYear();
+    navigate(`/v2/company/${companyId}/budget/${accountId}`); //?year=${year}
   };
 
   return (

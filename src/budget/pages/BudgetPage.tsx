@@ -1,589 +1,657 @@
+import React, { useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Edit2, Save, X } from "lucide-react";
 import { formatCurrency } from "@/helpers";
-import { Edit3, Save, X } from "lucide-react";
-import { Fragment, useState } from "react";
+import type {
+  Category,
+  Subcategory,
+  Subsubcategory,
+} from "@/home/types/categories.interfaces";
+import type { Budget } from "@/home/types/budget.interface";
 
-interface BudgetItem {
-  id: string;
-  name: string;
-  type: "category" | "subcategory" | "subsubcategory";
-  parentId?: string;
-  values: { [month: string]: number };
-  total: number;
+export interface MonthlyBudget {
+  [month: number]: number; // { 1: 1000, 2: 0, ... }
 }
 
-export const BudgetPage = () => {
-  const [selectedYear, setSelectedYear] = useState("2024");
-  const [editingCell, setEditingCell] = useState<string | null>(null);
-  const [editValue, setEditValue] = useState("");
+// Nodo union: agrega un campo kind para saber el nivel
+export type NodeBase =
+  | ({ kind: "CATEGORY" } & Category)
+  | ({ kind: "SUBCATEGORY" } & Subcategory)
+  | ({ kind: "SUBSUBCATEGORY" } & Subsubcategory);
 
-  const months = [
-    "Ene",
-    "Feb",
-    "Mar",
-    "Abr",
-    "May",
-    "Jun",
-    "Jul",
-    "Ago",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dic",
-  ];
+export type CategoryWithBudgets = NodeBase & {
+  budgets: MonthlyBudget; // solo se llena en hojas; en intermedios se calcula al vuelo
+  children?: CategoryWithBudgets[];
+  total?: number; // suma anual (12 meses o suma hijos)
+};
 
-  const [budgetData, setBudgetData] = useState<BudgetItem[]>([
-    {
-      id: "gastos-operativos",
-      name: "Gastos Operativos",
-      type: "category",
-      values: {},
-      total: 0,
-    },
-    {
-      id: "oficina",
-      name: "Oficina",
-      type: "subcategory",
-      parentId: "gastos-operativos",
-      values: {},
-      total: 0,
-    },
-    {
-      id: "renta",
-      name: "Renta",
-      type: "subsubcategory",
-      parentId: "oficina",
-      values: {
-        Ene: 45000,
-        Feb: 45000,
-        Mar: 45000,
-        Abr: 45000,
-        May: 45000,
-        Jun: 45000,
-        Jul: 45000,
-        Ago: 45000,
-        Sep: 45000,
-        Oct: 45000,
-        Nov: 45000,
-        Dic: 45000,
-      },
-      total: 540000,
-    },
-    {
-      id: "servicios",
-      name: "Servicios",
-      type: "subsubcategory",
-      parentId: "oficina",
-      values: {
-        Ene: 12500,
-        Feb: 12500,
-        Mar: 12500,
-        Abr: 12500,
-        May: 12500,
-        Jun: 12500,
-        Jul: 12500,
-        Ago: 12500,
-        Sep: 12500,
-        Oct: 12500,
-        Nov: 12500,
-        Dic: 12500,
-      },
-      total: 150000,
-    },
-    {
-      id: "suministros",
-      name: "Suministros",
-      type: "subsubcategory",
-      parentId: "oficina",
-      values: {
-        Ene: 32500,
-        Feb: 32500,
-        Mar: 32500,
-        Abr: 32500,
-        May: 32500,
-        Jun: 32500,
-        Jul: 32500,
-        Ago: 32500,
-        Sep: 32500,
-        Oct: 32500,
-        Nov: 32500,
-        Dic: 32500,
-      },
-      total: 390000,
-    },
-    {
-      id: "limpieza",
-      name: "Limpieza",
-      type: "subsubcategory",
-      parentId: "oficina",
-      values: {
-        Ene: 15000,
-        Feb: 15000,
-        Mar: 15000,
-        Abr: 15000,
-        May: 15000,
-        Jun: 15000,
-        Jul: 15000,
-        Ago: 15000,
-        Sep: 15000,
-        Oct: 15000,
-        Nov: 15000,
-        Dic: 15000,
-      },
-      total: 180000,
-    },
-    {
-      id: "seguridad",
-      name: "Seguridad",
-      type: "subsubcategory",
-      parentId: "oficina",
-      values: {
-        Ene: 25000,
-        Feb: 25000,
-        Mar: 25000,
-        Abr: 25000,
-        May: 25000,
-        Jun: 25000,
-        Jul: 25000,
-        Ago: 25000,
-        Sep: 25000,
-        Oct: 25000,
-        Nov: 25000,
-        Dic: 25000,
-      },
-      total: 300000,
-    },
-    // Nueva subcategoría: Personal
-    {
-      id: "personal",
-      name: "Personal",
-      type: "subcategory",
-      parentId: "gastos-operativos",
-      values: {},
-      total: 0,
-    },
-    {
-      id: "salarios",
-      name: "Salarios",
-      type: "subsubcategory",
-      parentId: "personal",
-      values: {
-        Ene: 120000,
-        Feb: 120000,
-        Mar: 120000,
-        Abr: 120000,
-        May: 120000,
-        Jun: 120000,
-        Jul: 120000,
-        Ago: 120000,
-        Sep: 120000,
-        Oct: 120000,
-        Nov: 120000,
-        Dic: 120000,
-      },
-      total: 1440000,
-    },
-    {
-      id: "prestaciones",
-      name: "Prestaciones",
-      type: "subsubcategory",
-      parentId: "personal",
-      values: {
-        Ene: 30000,
-        Feb: 30000,
-        Mar: 30000,
-        Abr: 30000,
-        May: 30000,
-        Jun: 30000,
-        Jul: 30000,
-        Ago: 30000,
-        Sep: 30000,
-        Oct: 30000,
-        Nov: 30000,
-        Dic: 30000,
-      },
-      total: 360000,
-    },
-    {
-      id: "capacitacion",
-      name: "Capacitación",
-      type: "subsubcategory",
-      parentId: "personal",
-      values: {
-        Ene: 8000,
-        Feb: 8000,
-        Mar: 8000,
-        Abr: 8000,
-        May: 8000,
-        Jun: 8000,
-        Jul: 8000,
-        Ago: 8000,
-        Sep: 8000,
-        Oct: 8000,
-        Nov: 8000,
-        Dic: 8000,
-      },
-      total: 96000,
-    },
-    {
-      id: "ingresos",
-      name: "Ingresos",
-      type: "category",
-      values: {},
-      total: 0,
-    },
-    {
-      id: "ventas",
-      name: "Ventas",
-      type: "subcategory",
-      parentId: "ingresos",
-      values: {},
-      total: 0,
-    },
-    {
-      id: "productos",
-      name: "Productos",
-      type: "subsubcategory",
-      parentId: "ventas",
-      values: {
-        Ene: 150000,
-        Feb: 150000,
-        Mar: 150000,
-        Abr: 150000,
-        May: 150000,
-        Jun: 150000,
-        Jul: 150000,
-        Ago: 150000,
-        Sep: 150000,
-        Oct: 150000,
-        Nov: 150000,
-        Dic: 150000,
-      },
-      total: 1800000,
-    },
-    {
-      id: "servicios-ventas",
-      name: "Servicios",
-      type: "subsubcategory",
-      parentId: "ventas",
-      values: {
-        Ene: 60000,
-        Feb: 60000,
-        Mar: 60000,
-        Abr: 60000,
-        May: 60000,
-        Jun: 60000,
-        Jul: 60000,
-        Ago: 60000,
-        Sep: 60000,
-        Oct: 60000,
-        Nov: 60000,
-        Dic: 60000,
-      },
-      total: 720000,
-    },
-  ]);
+export function buildHierarchyFromNested(
+  categories: Category[] = [],
+  budgetsByLeaf: Record<string, MonthlyBudget> = {}
+): CategoryWithBudgets[] {
+  const toLeaf = (leaf: Subsubcategory): CategoryWithBudgets => ({
+    kind: "SUBSUBCATEGORY",
+    ...leaf,
+    budgets: budgetsByLeaf[leaf._id] || {},
+    children: [],
+    total: 0,
+  });
 
-  const calculateCategoryTotal = (categoryId: string, month?: string) => {
-    const subcategories = budgetData.filter(
-      (item) => item.type === "subcategory" && item.parentId === categoryId
-    );
-
-    let total = 0;
-    subcategories.forEach((subcategory) => {
-      const subsubcategories = budgetData.filter(
-        (item) =>
-          item.type === "subsubcategory" && item.parentId === subcategory.id
-      );
-      subsubcategories.forEach((subsubcat) => {
-        if (month) {
-          total += subsubcat.values[month] || 0;
-        } else {
-          total += subsubcat.total;
-        }
-      });
-    });
-
-    return total;
+  const toSub = (sub: Subcategory): CategoryWithBudgets => {
+    const children = (sub.subsubcategories ?? []).map(toLeaf);
+    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0 };
   };
 
-  const handleEditCell = (itemId: string, month: string) => {
-    const item = budgetData.find((i) => i.id === itemId);
-    if (item && item.type === "subsubcategory") {
-      setEditingCell(`${itemId}-${month}`);
-      setEditValue((item.values[month] || 0).toString());
+  const toCat = (cat: Category): CategoryWithBudgets => {
+    const children = (cat.subcategories ?? []).map(toSub);
+    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0 };
+  };
+
+  return categories.map(toCat);
+}
+
+/**
+ * =============================
+ *  Mock Data
+ * =============================
+ */
+const MOCK_CATEGORIES: Category[] = [
+  {
+    _id: "cat-1",
+    name: "Operación",
+    scope: "COMPANY",
+    company: "company-A",
+    type: "EXPENSE",
+  },
+  {
+    _id: "cat-2",
+    name: "Ventas",
+    scope: "COMPANY",
+    company: "company-A",
+    type: "INCOME",
+  },
+  {
+    _id: "cat-3",
+    name: "Marketing",
+    scope: "COMPANY",
+    company: "company-B",
+    type: "EXPENSE",
+  },
+];
+
+const MOCK_SUBCATEGORIES: Subcategory[] = [
+  {
+    _id: "sub-1",
+    name: "Servicios",
+    scope: "COMPANY",
+    parent: "cat-1",
+    company: "company-A",
+  },
+  {
+    _id: "sub-2",
+    name: "Nómina",
+    scope: "COMPANY",
+    parent: "cat-1",
+    company: "company-A",
+  },
+  {
+    _id: "sub-3",
+    name: "Online",
+    scope: "COMPANY",
+    parent: "cat-2",
+    company: "company-A",
+  },
+  {
+    _id: "sub-4",
+    name: "Publicidad",
+    scope: "COMPANY",
+    parent: "cat-3",
+    company: "company-B",
+  },
+];
+
+const MOCK_SUBSUBCATEGORIES: Subsubcategory[] = [
+  {
+    _id: "subsub-1",
+    name: "Internet",
+    scope: "COMPANY",
+    parent: "sub-1",
+    company: "company-A",
+  },
+  {
+    _id: "subsub-2",
+    name: "Luz",
+    scope: "COMPANY",
+    parent: "sub-1",
+    company: "company-A",
+  },
+  {
+    _id: "subsub-3",
+    name: "Salarios",
+    scope: "COMPANY",
+    parent: "sub-2",
+    company: "company-A",
+  },
+  {
+    _id: "subsub-4",
+    name: "Bonos",
+    scope: "COMPANY",
+    parent: "sub-2",
+    company: "company-A",
+  },
+  {
+    _id: "subsub-5",
+    name: "E-commerce",
+    scope: "COMPANY",
+    parent: "sub-3",
+    company: "company-A",
+  },
+  {
+    _id: "subsub-6",
+    name: "Facebook Ads",
+    scope: "COMPANY",
+    parent: "sub-4",
+    company: "company-B",
+  },
+  {
+    _id: "subsub-7",
+    name: "Google Ads",
+    scope: "COMPANY",
+    parent: "sub-4",
+    company: "company-B",
+  },
+];
+
+// Un puñado de budgets (algunos meses vacíos = 0)
+const MOCK_BUDGETS: Budget[] = [
+  // company-A (hojas cat-1)
+  {
+    id: "b-1",
+    year: 2025,
+    month: 1,
+    subsubcategory: {
+      _id: "subsub-1",
+      name: "Internet",
+      scope: "COMPANY",
+      parent: "sub-1",
+      company: "company-A",
+    },
+    amount: 444,
+    account: "company-A",
+  },
+];
+
+/**
+ * =============================
+ *  Utilidades
+ * =============================
+ */
+const MONTHS = [
+  "Enero",
+  "Febrero",
+  "Marzo",
+  "Abril",
+  "Mayo",
+  "Junio",
+  "Julio",
+  "Agosto",
+  "Septiembre",
+  "Octubre",
+  "Noviembre",
+  "Diciembre",
+];
+
+/**
+ * =============================
+ *  Builder del árbol
+ * =============================
+ */
+function buildHierarchy(
+  categories: Category[],
+  subcategories: Subcategory[],
+  subsubs: Subsubcategory[],
+  budgets: Budget[],
+  fiscalYear: number
+): CategoryWithBudgets[] {
+  // budgets -> mapa por categoryId (subsub) y mes
+  const budgetsByCategory: Record<string, MonthlyBudget> = {};
+  budgets.forEach((b) => {
+    if (b.year !== fiscalYear) return;
+    if (!budgetsByCategory[b.subsubcategory._id])
+      budgetsByCategory[b.subsubcategory._id] = {};
+    budgetsByCategory[b.subsubcategory._id][b.month] =
+      (budgetsByCategory[b.subsubcategory._id][b.month] || 0) + b.amount;
+  });
+
+  // Índices por parent
+  const subcatsByCat = new Map<string, Subcategory[]>();
+  subcategories.forEach((s) => {
+    const arr = subcatsByCat.get(s.parent) || [];
+    arr.push(s);
+    subcatsByCat.set(s.parent, arr);
+  });
+
+  const subsubsBySub = new Map<string, Subsubcategory[]>();
+  subsubs.forEach((s) => {
+    const arr = subsubsBySub.get(s.parent) || [];
+    arr.push(s);
+    subsubsBySub.set(s.parent, arr);
+  });
+
+  const toLeafNode = (leaf: Subsubcategory): CategoryWithBudgets => ({
+    kind: "SUBSUBCATEGORY",
+    ...leaf,
+    budgets: budgetsByCategory[leaf._id] || {},
+    children: [],
+    total: 0,
+  });
+
+  const toSubcatNode = (sub: Subcategory): CategoryWithBudgets => {
+    const children = (subsubsBySub.get(sub._id) || []).map(toLeafNode);
+    return {
+      kind: "SUBCATEGORY",
+      ...sub,
+      budgets: {},
+      children,
+      total: 0,
+    };
+  };
+
+  const toCatNode = (cat: Category): CategoryWithBudgets => {
+    const children = (subcatsByCat.get(cat._id) || []).map(toSubcatNode);
+    return {
+      kind: "CATEGORY",
+      ...cat,
+      budgets: {},
+      children,
+      total: 0,
+    };
+  };
+
+  const root = categories.map(toCatNode);
+  calculateTotals(root);
+  return root;
+}
+
+/**
+ * Calcula totales (anual) bottom-up y retorna el total del arreglo
+ */
+function calculateTotals(nodes: CategoryWithBudgets[]): number {
+  let total = 0;
+  nodes.forEach((n) => {
+    if (n.children && n.children.length) {
+      n.total = calculateTotals(n.children);
+    } else {
+      // hoja: sumar meses
+      n.total = Object.values(n.budgets).reduce((acc, v) => acc + v, 0);
     }
+    total += n.total || 0;
+  });
+  return total;
+}
+
+/**
+ * Suma un mes específico recorriendo el árbol (solo hojas tienen budgets)
+ */
+function getMonthTotal(nodes: CategoryWithBudgets[], month: number): number {
+  let sum = 0;
+  for (const n of nodes) {
+    if (n.children && n.children.length)
+      sum += getMonthTotal(n.children, month);
+    else sum += n.budgets[month] || 0;
+  }
+  return sum;
+}
+
+/**
+ * =============================
+ *  Componente principal (Mock)
+ * =============================
+ */
+interface BudgetPageProps {
+  activeGroup?: string; // solo para header
+  fiscalYear?: number; // default 2025
+  // Si quieres inyectar data desde afuera, puedes pasarla
+  categories?: Category[];
+  subcategories?: Subcategory[];
+  subsubcategories?: Subsubcategory[];
+  budgets?: Budget[];
+  accountId?: string;
+  onBack?: () => void;
+}
+
+const levelColors = [
+  "bg-blue-50 border-blue-200",
+  "bg-green-50 border-green-200",
+  "bg-yellow-50 border-yellow-200",
+];
+
+export default function BudgetPageMock({
+  activeGroup = "Grupo Demo",
+  fiscalYear = 2025,
+  categories = MOCK_CATEGORIES,
+  subcategories = MOCK_SUBCATEGORIES,
+  subsubcategories = MOCK_SUBSUBCATEGORIES,
+  budgets: incomingBudgets = MOCK_BUDGETS,
+  accountId = "company-A",
+  onBack = () => {},
+}: BudgetPageProps) {
+  // Estado fuente de verdad de budgets (como si fuera tu DB)
+  const [budgets, setBudgets] = useState<Budget[]>(incomingBudgets);
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [editingCell, setEditingCell] = useState<{
+    nodeKey: string;
+    month: number;
+  } | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+
+  // Construimos el árbol cada vez que cambian budgets o insumos
+  const tree = useMemo(
+    () =>
+      buildHierarchy(
+        categories,
+        subcategories,
+        subsubcategories,
+        budgets,
+        fiscalYear
+      ),
+    [categories, subcategories, subsubcategories, budgets, fiscalYear]
+  );
+
+  const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]); // recalcula totales (defensivo)
+
+  const toggle = (kind: NodeBase["kind"], id: string) => {
+    const key = `${kind}:${id}`;
+    const next = new Set(expanded);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    setExpanded(next);
   };
 
-  const calculateSubcategoryTotal = (subcategoryId: string, month?: string) => {
-    const subsubcategories = budgetData.filter(
-      (item) =>
-        item.type === "subsubcategory" && item.parentId === subcategoryId
-    );
-
-    let total = 0;
-    subsubcategories.forEach((subsubcat) => {
-      if (month) {
-        total += subsubcat.values[month] || 0;
-      } else {
-        total += subsubcat.total;
-      }
-    });
-
-    return total;
+  const startEditing = (
+    node: CategoryWithBudgets,
+    month: number,
+    current: number
+  ) => {
+    const nodeKey = `${node.kind}:${node._id}`;
+    setEditingCell({ nodeKey, month });
+    setEditValue(String(current ?? 0));
   };
 
-  const calculateGrandTotal = (month?: string) => {
-    const categories = budgetData.filter((item) => item.type === "category");
-    let total = 0;
-    categories.forEach((category) => {
-      total += calculateCategoryTotal(category.id, month);
-    });
-    return total;
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const handleSaveCell = (itemId: string, month: string) => {
-    const newValue = parseFloat(editValue) || 0;
-    setBudgetData((prev) =>
-      prev.map((item) => {
-        if (item.id === itemId) {
-          const newValues = { ...item.values, [month]: newValue };
-          const newTotal = Object.values(newValues).reduce(
-            (sum, val) => sum + val,
-            0
-          );
-          return { ...item, values: newValues, total: newTotal };
-        }
-        return item;
-      })
-    );
+  const cancelEditing = () => {
     setEditingCell(null);
     setEditValue("");
   };
 
-  return (
-    <div className="space-y-6 p-6">
-      <div className="flex justify-between bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">
-            Gestión de Presupuestos
-          </h2>
-          <p className="text-gray-600">
-            Administra los presupuestos por categorías para el año fiscal{" "}
-            {selectedYear}
-          </p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  const subsubIndex = useMemo(() => {
+    const map = new Map<string, Subsubcategory>();
+    categories.forEach((c) =>
+      c.subcategories?.forEach((s) =>
+        s.subsubcategories?.forEach((ss) => map.set(ss._id, ss))
+      )
+    );
+    return map;
+  }, [categories]);
+
+  const saveBudget = () => {
+    if (!editingCell) return;
+    const amount = parseFloat(editValue) || 0;
+    const [kind, id] = editingCell.nodeKey.split(":");
+    if (kind !== "SUBSUBCATEGORY") return; // seguridad: solo hojas
+
+    const month = editingCell.month;
+
+    setBudgets((prev) => {
+      // buscamos si existe un registro para esa hoja/mes/año
+      const idx = prev.findIndex(
+        (b) =>
+          b.subsubcategory._id === id &&
+          b.month === month &&
+          b.year === fiscalYear &&
+          b.account === accountId
+      );
+
+      if (idx >= 0) {
+        // actualizar
+        const next = [...prev];
+        next[idx] = { ...next[idx], amount };
+        return next;
+      }
+      const subsub = subsubIndex.get(id);
+      if (!subsub) return prev;
+      return [
+        ...prev,
+        {
+          id: `b-${Date.now()}`,
+          subsubcategory: subsub,
+          month,
+          year: fiscalYear,
+          amount,
+          account: accountId,
+        },
+      ];
+    });
+
+    cancelEditing();
+  };
+
+  const renderRow = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
+    const hasChildren = !!(node.children && node.children.length);
+    const isLeaf = node.kind === "SUBSUBCATEGORY";
+    const paddingLeft = level * 32; // px
+    const rowKey = `${node.kind}:${node._id}`;
+    const isExpanded = expanded.has(rowKey);
+
+    const monthlyTotals = MONTHS.map((_, i) => node.budgets?.[i + 1] || 0);
+
+    return (
+      <React.Fragment key={rowKey}>
+        <tr
+          className={`border-b ${
+            levelColors[level % 3]
+          } transition-all hover:bg-opacity-75`}
+        >
+          <td
+            className="px-4 py-3 sticky left-0 bg-inherit z-10"
+            style={{ paddingLeft: paddingLeft + 16 }}
           >
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-          </select>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2">
-            <Save className="w-4 h-4" />
-            <span>Guardar Cambios</span>
-          </button>
+            <div className="flex items-center gap-2">
+              {hasChildren ? (
+                <button
+                  onClick={() => toggle(node.kind, node._id)}
+                  className="p-1 hover:bg-white rounded"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-gray-600" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-600" />
+                  )}
+                </button>
+              ) : (
+                <div className="w-6" />
+              )}
+              <span
+                className={`font-medium ${
+                  level === 0
+                    ? "text-lg"
+                    : level === 1
+                    ? "text-base"
+                    : "text-sm"
+                } text-gray-900`}
+              >
+                {node.name}
+              </span>
+              {isLeaf ? (
+                <span className="px-2 py-0.5 text-xs bg-white rounded-full text-gray-600">
+                  Detalle
+                </span>
+              ) : null}
+            </div>
+          </td>
+
+          {MONTHS.map((_, monthIndex) => {
+            const month = monthIndex + 1;
+            const value = isLeaf ? node.budgets?.[month] || 0 : 0;
+            const isEditing =
+              editingCell?.nodeKey === rowKey && editingCell?.month === month;
+
+            return (
+              <td key={month} className="px-2 py-2 text-center">
+                {isLeaf ? (
+                  isEditing ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveBudget();
+                          if (e.key === "Escape") cancelEditing();
+                        }}
+                        className="w-24 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                      />
+                      <button
+                        onClick={saveBudget}
+                        className="p-1 text-green-600 hover:bg-green-100 rounded"
+                      >
+                        <Save className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => startEditing(node, month, value)}
+                      className="group flex items-center justify-center gap-1 w-full px-2 py-1 hover:bg-white rounded"
+                    >
+                      <span className="text-sm font-medium">
+                        {formatCurrency(value)}
+                      </span>
+                      <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
+                    </button>
+                  )
+                ) : (
+                  <span className="text-sm font-semibold text-gray-700">
+                    {hasChildren && isExpanded
+                      ? formatCurrency(
+                          monthlyTotals[monthIndex] ||
+                            getMonthTotal(node.children || [], month)
+                        )
+                      : "-"}
+                  </span>
+                )}
+              </td>
+            );
+          })}
+
+          <td className="px-4 py-3 text-right sticky right-0 bg-inherit z-10">
+            <span
+              className={`font-bold ${
+                level === 0 ? "text-lg" : "text-base"
+              } text-gray-900`}
+            >
+              {formatCurrency(node.total || 0)}
+            </span>
+          </td>
+        </tr>
+
+        {hasChildren &&
+          isExpanded &&
+          node.children!.map((c) => renderRow(c, level + 1))}
+      </React.Fragment>
+    );
+  };
+
+  return (
+    <div className="max-w-full m-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="flex items-center justify-between p-6 border-b">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Presupuesto {fiscalYear}
+            </h2>
+            <p className="text-gray-600 mt-1">
+              Administra el presupuesto mensual por categoría — {activeGroup}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-4 py-2 bg-blue-50 rounded-lg">
+              <span className="text-sm text-blue-700 font-medium">
+                Total: {formatCurrency(grandTotal)}
+              </span>
+            </div>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            >
+              Volver al Dashboard
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-100 sticky top-0 z-20">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-100 z-30">
+                  Categoría
+                </th>
+                {MONTHS.map((m) => (
+                  <th
+                    key={m}
+                    className="px-2 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[120px]"
+                  >
+                    {m}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider sticky right-0 bg-gray-100 z-30 min-w-[150px]">
+                  Total Anual
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">{tree.map((n) => renderRow(n))}</tbody>
+            <tfoot className="bg-gray-100 font-bold sticky bottom-0">
+              <tr>
+                <td className="px-4 py-4 text-left sticky left-0 bg-gray-100 z-30">
+                  TOTAL GENERAL
+                </td>
+                {MONTHS.map((_, i) => (
+                  <td key={i} className="px-2 py-4 text-center text-gray-900">
+                    {formatCurrency(getMonthTotal(tree, i + 1))}
+                  </td>
+                ))}
+                <td className="px-4 py-4 text-right sticky right-0 bg-gray-100 z-30">
+                  <span className="text-lg">{formatCurrency(grandTotal)}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
-        <table className="w-full min-w-[1400px]">
-          <thead>
-            <tr className="bg-gray-50 border-b border-gray-200">
-              <th className="text-left py-4 px-6 font-semibold text-gray-900 min-w-[200px]">
-                Concepto
-              </th>
-              {months.map((month) => (
-                <th
-                  key={month}
-                  className="text-center py-4 px-4 font-semibold text-gray-900 min-w-[100px]"
-                >
-                  {month}
-                </th>
-              ))}
-              <th className="text-center py-4 px-6 font-semibold text-gray-900 min-w-[120px]">
-                Total Anual
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {budgetData
-              .filter((item) => item.type === "category")
-              .map((category) => (
-                <Fragment key={category.id}>
-                  {/* Category Row */}
-                  <tr className="bg-blue-50 border-b border-gray-200">
-                    <td className="py-4 px-6 font-bold text-blue-900">
-                      {category.name}
-                    </td>
-                    {months.map((month) => (
-                      <td
-                        key={month}
-                        className="text-center py-4 px-4 font-bold text-blue-900"
-                      >
-                        {formatCurrency(
-                          calculateCategoryTotal(category.id, month)
-                        )}
-                      </td>
-                    ))}
-                    <td className="text-center py-4 px-6 font-bold text-blue-900">
-                      {formatCurrency(calculateCategoryTotal(category.id))}
-                    </td>
-                  </tr>
-
-                  {/* Subcategories */}
-                  {budgetData
-                    .filter(
-                      (item) =>
-                        item.type === "subcategory" &&
-                        item.parentId === category.id
-                    )
-                    .map((subcategory) => (
-                      <Fragment key={subcategory.id}>
-                        {/* Subcategory Row */}
-                        <tr className="bg-green-50 border-b border-gray-200">
-                          <td className="py-3 px-8 font-semibold text-green-900">
-                            {subcategory.name}
-                          </td>
-                          {months.map((month) => (
-                            <td
-                              key={month}
-                              className="text-center py-3 px-4 font-semibold text-green-900"
-                            >
-                              {formatCurrency(
-                                calculateSubcategoryTotal(subcategory.id, month)
-                              )}
-                            </td>
-                          ))}
-                          <td className="text-center py-3 px-6 font-semibold text-green-900">
-                            {formatCurrency(
-                              calculateSubcategoryTotal(subcategory.id)
-                            )}
-                          </td>
-                        </tr>
-
-                        {/* Subsubcategories */}
-                        {budgetData
-                          .filter(
-                            (item) =>
-                              item.type === "subsubcategory" &&
-                              item.parentId === subcategory.id
-                          )
-                          .map((subsubcategory) => (
-                            <tr
-                              key={subsubcategory.id}
-                              className="bg-gray-50 border-b border-gray-100 hover:bg-gray-100"
-                            >
-                              <td className="py-3 px-12 text-gray-700 flex items-center">
-                                <span className="w-2 h-2 bg-blue-400 rounded-full mr-3"></span>
-                                {subsubcategory.name}
-                              </td>
-                              {months.map((month) => (
-                                <td
-                                  key={month}
-                                  className="text-center py-3 px-4"
-                                >
-                                  {editingCell ===
-                                  `${subsubcategory.id}-${month}` ? (
-                                    <div className="flex items-center justify-center space-x-1">
-                                      <input
-                                        type="number"
-                                        value={editValue}
-                                        onChange={(e) =>
-                                          setEditValue(e.target.value)
-                                        }
-                                        className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        onKeyPress={(e) => {
-                                          if (e.key === "Enter") {
-                                            handleSaveCell(
-                                              subsubcategory.id,
-                                              month
-                                            );
-                                          }
-                                        }}
-                                        autoFocus
-                                      />
-                                      <button
-                                        onClick={() =>
-                                          handleSaveCell(
-                                            subsubcategory.id,
-                                            month
-                                          )
-                                        }
-                                        className="text-green-600 hover:text-green-800"
-                                      >
-                                        <Save className="w-3 h-3" />
-                                      </button>
-                                      <button
-                                        onClick={() => setEditingCell(null)}
-                                        className="text-red-600 hover:text-red-800"
-                                      >
-                                        <X className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <div className="flex items-center justify-center space-x-2">
-                                      <span className="text-gray-700">
-                                        {formatCurrency(
-                                          subsubcategory.values[month] || 0
-                                        )}
-                                      </span>
-                                      <button
-                                        onClick={() =>
-                                          handleEditCell(
-                                            subsubcategory.id,
-                                            month
-                                          )
-                                        }
-                                        className="text-gray-400 hover:text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                                      >
-                                        <Edit3 className="w-3 h-3" />
-                                      </button>
-                                    </div>
-                                  )}
-                                </td>
-                              ))}
-                              <td className="text-center py-3 px-6 font-semibold text-gray-900">
-                                {formatCurrency(subsubcategory.total)}
-                              </td>
-                            </tr>
-                          ))}
-                      </Fragment>
-                    ))}
-                </Fragment>
-              ))}
-
-            {/* Grand Total Row */}
-            <tr className="bg-red-50 border-t-2 border-red-200">
-              <td className="py-4 px-6 font-bold text-red-900 text-lg">
-                Total General
-              </td>
-              {months.map((month) => (
-                <td
-                  key={month}
-                  className="text-center py-4 px-4 font-bold text-red-900 text-lg"
-                >
-                  {formatCurrency(calculateGrandTotal(month))}
-                </td>
-              ))}
-              <td className="text-center py-4 px-6 font-bold text-red-900 text-lg">
-                {formatCurrency(calculateGrandTotal())}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2">Instrucciones:</h3>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>
+            • Haz clic en los montos de las categorías de{" "}
+            <strong>Detalle</strong> para editarlos.
+          </li>
+          <li>
+            • Los totales de Subcategorías y Categorías se calculan
+            automáticamente.
+          </li>
+          <li>
+            • Presiona <kbd className="px-2 py-0.5 bg-white rounded">Enter</kbd>{" "}
+            para guardar o{" "}
+            <kbd className="px-2 py-0.5 bg-white rounded">Esc</kbd> para
+            cancelar.
+          </li>
+        </ul>
       </div>
     </div>
   );
-};
+}

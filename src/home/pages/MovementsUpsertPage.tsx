@@ -44,6 +44,8 @@ export const MovementsUpsertPage = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
 
+  const backTo = (location.state as any)?.backTo as string | null;
+
   const movementQuery = useQuery({
     queryKey: ["movement", idMovement],
     queryFn: () => getMovementByIdAction(idMovement!),
@@ -207,11 +209,16 @@ export const MovementsUpsertPage = () => {
   });
 
   const handleCancel = () => {
-    const homeSnap = (location.state as any)?.homeSnapshot ?? null;
-    navigate("/", {
-      replace: true,
-      state: homeSnap ? { restoreHome: homeSnap } : null,
-    });
+    if (backTo) {
+      navigate(backTo, { replace: true });
+    } else {
+      navigate(-1);
+    }
+    // const homeSnap = (location.state as any)?.homeSnapshot ?? null;
+    // navigate("/", {
+    //   replace: true,
+    //   state: homeSnap ? { restoreHome: homeSnap } : null,
+    // });
   };
 
   const onSubmit = (form: FormValues) => {

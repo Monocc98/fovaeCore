@@ -1,13 +1,17 @@
 import { useHomeStore } from "@/home/hooks/useHomeStore";
 import { LibraryBig } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 
 export const AdminCategoriesButton = () => {
-  const { activeCompanyId } = useHomeStore();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { companyId } = useParams<{ companyId: string }>();
 
   const handleOnCLick = () => {
-    navigate(`/categories/${activeCompanyId}`);
+    const backTo = location.pathname + location.search;
+    navigate(`/v2/company/${companyId}/categories/${companyId}`, {
+      state: { backTo },
+    });
   };
 
   return (

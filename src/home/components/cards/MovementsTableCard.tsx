@@ -12,7 +12,7 @@ import type { Movement } from "@/home/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
 import type { MovementsFilters } from "@/home/types/movements-filters.interface";
 
@@ -20,16 +20,21 @@ interface Props {
   movements?: Movement[];
   filters: MovementsFilters;
   onChangeFilters: (next: MovementsFilters) => void;
+  accountId?: string;
 }
 
 export const MovementsTableCard = ({
   movements = [],
   filters,
   onChangeFilters,
+  accountId,
 }: Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
   );
+
+  const location = useLocation();
+  const { companyId } = useParams<{ companyId: string }>();
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -117,17 +122,21 @@ export const MovementsTableCard = ({
     useHomeStore();
 
   const handleNewMovimiento = () => {
-    navigate(`/movement/new/${activeAccountId}`, {
+    const backTo = location.pathname + location.search;
+    navigate(`/v2/company/${companyId}/movement/new/${activeAccountId}`, {
       state: {
         homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
+        state: { backTo },
       },
     });
   };
 
   const handleEditMovement = (idMovement: string) => {
-    navigate(`movement/${idMovement}/edit`, {
+    const backTo = location.pathname + location.search;
+    navigate(`/v2/company/${companyId}/movement/${idMovement}/edit`, {
       state: {
         homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
+        state: { backTo },
       },
     });
   };

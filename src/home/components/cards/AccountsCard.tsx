@@ -2,11 +2,17 @@ import type { Company } from "@/home/types/comany.interface";
 import { CompanyCards } from "./ui/CompanyCards";
 import type { Account } from "@/home/types/account.interface";
 
-interface Props {
-  content?: Company[] | Account[] | undefined;
+type Content = Company | Account;
+
+interface Props<T extends Content = Content> {
+  content?: T[];
+  onClick?: (item: T) => void;
 }
 
-export const AccountsCard = ({ content = [] }: Props) => {
+export const AccountsCard = <T extends Content>({
+  content = [],
+  onClick,
+}: Props<T>) => {
   return (
     <div className="space-y-3">
       {content.length === 0 ? (
@@ -35,7 +41,11 @@ export const AccountsCard = ({ content = [] }: Props) => {
         </div>
       ) : (
         content.map((content) => (
-          <CompanyCards key={content._id} content={content} />
+          <CompanyCards
+            key={content._id}
+            content={content}
+            onClick={() => onClick?.(content as T)}
+          />
         ))
       )}
     </div>

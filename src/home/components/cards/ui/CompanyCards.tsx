@@ -5,6 +5,7 @@ import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 
 interface Props {
   content: Company | Account;
+  onClick?: () => void;
 }
 
 function formatCurrency(amount: number): string {
@@ -27,8 +28,8 @@ function getBalanceIcon(balance: number) {
   return <DollarSign className="w-4 h-4" />;
 }
 
-export const CompanyCards = ({ content }: Props) => {
-  const { changeLevelUp } = useHomeStore();
+export const CompanyCards = ({ content, onClick }: Props) => {
+  // const { changeLevelUp } = useHomeStore();
 
   return (
     <div
@@ -36,7 +37,8 @@ export const CompanyCards = ({ content }: Props) => {
       className={`cursor-pointer flex items-center justify-between p-3 rounded-lg border ${getBalanceColor(
         content.balance
       )}`}
-      onClick={() => changeLevelUp(content._id)}
+      // onClick={() => changeLevelUp(content._id)}
+      onClick={onClick}
     >
       <div className="flex items-center space-x-3">
         {getBalanceIcon(content.balance)}

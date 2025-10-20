@@ -1,5 +1,4 @@
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
-import { useCategories } from "../hooks/useCategories";
 import { getLevelBadge, getScopeBadge } from "@/helpers";
 import { useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
@@ -19,7 +18,7 @@ import {
 } from "@/home/actions/categories.actions";
 
 import { DeleteCategoryAlert } from "../components/alerts/DeleteCategoryAlert";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import type { CategoriesResponse } from "@/home/types/companiesResponse.interface";
 import type { Category } from "@/home/types/categories.interfaces";
 
@@ -50,9 +49,19 @@ export type Row = {
 
 export const CategoriesPage = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<Row | null>(null);
+  const [showForm, setShowForm] = useState(false);
+
   const { activeCompanyId } = useHomeStore();
   const queryClient = useQueryClient();
-  const { idAccount } = useParams();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { companyId, idAccount } = useParams<{
+    companyId: string;
+    idAccount: string;
+  }>();
+
+  const backTo = (location.state as any)?.backTo as string | undefined;
 
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -174,19 +183,21 @@ export const CategoriesPage = () => {
   // --- Filtrado de filas para tabla ---
   const filteredRows = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
+
     return rows.filter((r) => {
-      const matchText = !q || r.path.toLowerCase().includes(q);
+      const matchText =
+        !q ||
+        r.name.toLowerCase().includes(q) ||
+        r.path.toLowerCase().includes(q) ||
+        (r.type?.toLowerCase().includes(q) ?? false);
+
       const matchScope = scopeFilter === "ALL" || r.scope === scopeFilter;
-
-      // filtrar por categoría padre
       const matchCat = !catFilter || r.catId === catFilter;
-
-      // filtrar por subcategoría (solo si hay cat y sub seleccionados)
       const matchSub = !subFilter || r.subId === subFilter;
 
       return matchText && matchScope && matchCat && matchSub;
     });
-  }, [rows, searchTerm, scopeFilter]);
+  }, [rows, searchTerm, scopeFilter, catFilter, subFilter]);
 
   const createMut = useMutation({
     mutationFn: async (payload: CategoryFormValues) => {
@@ -283,13 +294,58 @@ export const CategoriesPage = () => {
       queryClient.invalidateQueries({
         queryKey: ["categories", activeCompanyId],
       });
+      reset;
       setCategoryToDelete(null);
+      setEditingId(null);
+      setShowForm(false);
     },
   });
 
-  const handleCancelEdit = () => {
+  const openCreate = () => {
+    setEditingId(null);
+    reset({
+      name: "",
+      level: "category",
+      scope: "COMPANY",
+      parentId: "",
+      type: "",
+    });
+    setShowForm(true);
+  };
+
+  const openEdit = (row: Row) => {
+    // Preefill como ya lo hacías:
+    if (row.level === "category") {
+      reset({
+        name: row.name,
+        level: "category",
+        scope: (row.scope as Scope) ?? "COMPANY",
+        parentId: "",
+        type: row.type,
+      });
+    } else if (row.level === "subcategory") {
+      reset({
+        name: row.name,
+        level: "subcategory",
+        scope: (row.scope as Scope) ?? "COMPANY",
+        parentId: row.catId,
+      });
+    } else {
+      reset({
+        name: row.name,
+        level: "subsubcategory",
+        scope: (row.scope as Scope) ?? "COMPANY",
+        parentId: row.subId,
+      });
+    }
+    setEditingId(row.id);
+    setShowForm(true);
+  };
+
+  const handleCancelForm = () => {
     reset();
     setEditingId(null);
+    setShowForm(false);
   };
 
   const handleDeleteClick = (category: Row) => {
@@ -320,33 +376,46 @@ export const CategoriesPage = () => {
   };
 
   const handleEdit = (row: Row) => {
-    // Prefill según nivel y jerarquía
-    if (row.level === "category") {
-      reset({
-        name: row.name,
-        level: "category",
-        scope: (row.scope as Scope) ?? "COMPANY",
-        parentId: "",
-        type: row.type,
-      });
-    } else if (row.level === "subcategory") {
-      reset({
-        name: row.name,
-        level: "subcategory",
-        scope: (row.scope as Scope) ?? "COMPANY",
-        parentId: row.catId, // su padre es la categoría
-      });
-    } else {
-      // subsubcategory
-      reset({
-        name: row.name,
-        level: "subsubcategory",
-        scope: (row.scope as Scope) ?? "COMPANY",
-        parentId: row.subId, // su padre es la subcategoría
-      });
-    }
-    setEditingId(row.id);
+    openEdit(row);
+    // // Prefill según nivel y jerarquía
+    // if (row.level === "category") {
+    //   reset({
+    //     name: row.name,
+    //     level: "category",
+    //     scope: (row.scope as Scope) ?? "COMPANY",
+    //     parentId: "",
+    //     type: row.type,
+    //   });
+    // } else if (row.level === "subcategory") {
+    //   reset({
+    //     name: row.name,
+    //     level: "subcategory",
+    //     scope: (row.scope as Scope) ?? "COMPANY",
+    //     parentId: row.catId, // su padre es la categoría
+    //   });
+    // } else {
+    //   // subsubcategory
+    //   reset({
+    //     name: row.name,
+    //     level: "subsubcategory",
+    //     scope: (row.scope as Scope) ?? "COMPANY",
+    //     parentId: row.subId, // su padre es la subcategoría
+    //   });
+    // }
+    // setEditingId(row.id);
   };
+
+  const handleBack = () => {
+    if (backTo) {
+      navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
+    } else if (companyId) {
+      // fallback razonable a la vista de la empresa con la cuenta activa marcada
+      navigate(`/v2/company/${companyId}?a=${idAccount}`, { replace: true });
+    } else {
+      navigate(-1); // último recurso
+    }
+  };
+
   return (
     <>
       <div className="max-w-6xl py-6 mx-auto">
@@ -364,13 +433,13 @@ export const CategoriesPage = () => {
             </div>
             <div className="flex items-center space-x-3">
               <button
-                // onClick={() => setCurrentView("dashboard")}
+                onClick={handleBack}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
               >
                 Volver al Dashboard
               </button>
               <button
-                // onClick={handleNewCategory}
+                onClick={openCreate}
                 className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
@@ -380,101 +449,103 @@ export const CategoriesPage = () => {
           </div>
 
           {/* Category Form */}
-          <form
-            onSubmit={handleSubmit(onSubmit)}
-            className="bg-gray-50 rounded-lg p-6 mb-8"
-          >
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              {/* {editingCategory ? "Editar Categoría" : "Nueva Categoría"} */}
-            </h3>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nombre
-                </label>
-                <input
-                  type="text"
-                  {...register("name")}
-                  placeholder="Nombre de la categoría..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                />
-              </div>
-
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nivel
-                </label>
-                <select
-                  {...register("level")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                >
-                  <option value="category">Categoría</option>
-                  <option value="subcategory">Subcategoría</option>
-                  <option value="subsubcategory">Detalle</option>
-                </select>
-              </div>
-
-              {level !== "category" ? (
-                <div className="col-span-3">
+          {showForm && (
+            <form
+              onSubmit={handleSubmit(onSubmit)}
+              className="bg-gray-50 rounded-lg p-6 mb-8"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                {/* {editingCategory ? "Editar Categoría" : "Nueva Categoría"} */}
+              </h3>
+              <div className="grid grid-cols-12 gap-4">
+                <div className="col-span-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Categoría Padre
+                    Nombre
+                  </label>
+                  <input
+                    type="text"
+                    {...register("name")}
+                    placeholder="Nombre de la categoría..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nivel
                   </label>
                   <select
-                    {...register("parentId")}
+                    {...register("level")}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   >
-                    <option value="">Seleccionar...</option>
-                    {parentOptions.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
+                    <option value="category">Categoría</option>
+                    <option value="subcategory">Subcategoría</option>
+                    <option value="subsubcategory">Detalle</option>
+                  </select>
+                </div>
+
+                {level !== "category" ? (
+                  <div className="col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Categoría Padre
+                    </label>
+                    <select
+                      {...register("parentId")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="">Seleccionar...</option>
+                      {parentOptions.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div className="col-span-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Tipo
+                    </label>
+                    <select
+                      {...register("type")}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    >
+                      <option value="">Seleccionar...</option>
+                      <option key="income" value="INCOME">
+                        Ingreso
                       </option>
-                    ))}
-                  </select>
-                </div>
-              ) : (
-                <div className="col-span-3">
+                      <option key="expense" value="EXPENSE">
+                        Egreso
+                      </option>
+                    </select>
+                  </div>
+                )}
+
+                <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo
+                    Alcance
                   </label>
                   <select
-                    {...register("type")}
+                    {...register("scope")}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   >
-                    <option value="">Seleccionar...</option>
-                    <option key="income" value="INCOME">
-                      Ingreso
-                    </option>
-                    <option key="expense" value="EXPENSE">
-                      Egreso
-                    </option>
+                    <option value="COMPANY">Empresa</option>
+                    <option value="ACCOUNT">Cuenta</option>
                   </select>
                 </div>
-              )}
 
-              <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Alcance
-                </label>
-                <select
-                  {...register("scope")}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                >
-                  <option value="COMPANY">Empresa</option>
-                  <option value="ACCOUNT">Cuenta</option>
-                </select>
+                <div className="col-span-1 flex items-end">
+                  <button
+                    type="submit"
+                    // disabled={!categoryFormData.name}
+                    className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  >
+                    {editingId ? "Actualizar" : "Agregar"}
+                  </button>
+                </div>
               </div>
-
-              <div className="col-span-1 flex items-end">
-                <button
-                  type="submit"
-                  // disabled={!categoryFormData.name}
-                  className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  {/* {editingCategory ? "Actualizar" : "Crear"} */}
-                </button>
-              </div>
-            </div>
-          </form>
+            </form>
+          )}
 
           {/* Filters */}
           <div className="flex items-center justify-between mb-6">
@@ -484,12 +555,8 @@ export const CategoriesPage = () => {
                 <input
                   type="text"
                   placeholder="Buscar categorías..."
-                  value={scopeFilter}
-                  onChange={(e) =>
-                    setScopeFilter(
-                      e.target.value as "ALL" | "COMPANY" | "ACCOUNT"
-                    )
-                  }
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 />
               </div>
