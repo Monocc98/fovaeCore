@@ -9,7 +9,7 @@ export const AdminCategoriesButton = () => {
 
   const handleOnCLick = () => {
     const backTo = location.pathname + location.search;
-    navigate(`/v2/company/${companyId}/categories/${companyId}`, {
+    navigate(`/company/${companyId}/categories/${companyId}`, {
       state: { backTo },
     });
   };

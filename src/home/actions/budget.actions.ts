@@ -19,7 +19,7 @@ export const getBudgetByIdAction = async( idBudget: string ):Promise<Budget> => 
 
 export const createBudgetAction = async(payload: Budget): Promise<Budget> => {
     const body: Budget = {
-        ...payload,
+        ...payload
     };
 
     const { data } = await fovaeCoreApi.post("/budgets", body);
@@ -27,7 +27,7 @@ export const createBudgetAction = async(payload: Budget): Promise<Budget> => {
     return data.budget;
 }
 
-export const updateBudgetAction = async(idBudget: string, payload: Budget): Promise<Budget> => {
+export const updateBudgetAction = async(idBudget: string, payload: Budget) => {
     const body: Budget = {
         ...payload,
     }

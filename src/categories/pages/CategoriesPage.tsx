@@ -410,7 +410,7 @@ export const CategoriesPage = () => {
       navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
     } else if (companyId) {
       // fallback razonable a la vista de la empresa con la cuenta activa marcada
-      navigate(`/v2/company/${companyId}?a=${idAccount}`, { replace: true });
+      navigate(`/company/${companyId}?a=${idAccount}`, { replace: true });
     } else {
       navigate(-1); // último recurso
     }

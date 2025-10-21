@@ -4,7 +4,7 @@ export const CustomLogo = () => {
   const navigate = useNavigate();
 
   const handleClick = () => {
-    navigate("/v2");
+    navigate("/");
   };
 
   return (

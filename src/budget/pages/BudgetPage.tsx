@@ -7,9 +7,16 @@ import type {
   Subsubcategory,
 } from "@/home/types/categories.interfaces";
 import type { Budget } from "@/home/types/budget.interface";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { getCategoriesOverloadAction } from "@/home/actions/categories.actions";
+import {
+  createBudgetAction,
+  deleteBudgetAction,
+  getBudgetsAction,
+  updateBudgetAction,
+  type BudgetsByAccountResponse,
+} from "@/home/actions/budget.actions";
 
 export interface MonthlyBudget {
   [month: number]: number; // { 1: 1000, 2: 0, ... }
@@ -25,6 +32,8 @@ export type CategoryWithBudgets = NodeBase & {
   children?: CategoryWithBudgets[];
   total?: number;
 };
+
+type UpsertVars = { leafId: string; month: number; amount: number };
 
 /**
  * =============================
@@ -112,7 +121,7 @@ function buildHierarchyFromNested(
 interface Props {
   activeGroup?: string;
   fiscalYear?: number;
-  budgets?: Budget[];    // si no tienes server aún, puedes pasar []
+  budgets?: Budget[]; // si no tienes server aún, puedes pasar []
   accountId?: string;
   onBack?: () => void;
 }
@@ -126,34 +135,85 @@ const levelColors = [
 export const BudgetPage = ({
   activeGroup = "Grupo Demo",
   fiscalYear = 2025,
-  //budgets: incomingBudgets = [],
-  onBack = () => {},
-}: Props) => {
+}: //budgets: incomingBudgets = [],
+Props) => {
   // Estado fuente de verdad de budgets (como si fuera tu DB)
   //const [budgets, setBudgets] = useState<Budget[]>(incomingBudgets);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [editingCell, setEditingCell] = useState<{ nodeKey: string; month: number } | null>(null);
+  const [editingCell, setEditingCell] = useState<{
+    nodeKey: string;
+    month: number;
+  } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
 
-  const { companyId, accountId } = useParams<{ companyId: string; accountId?: string }>();
+  const queryClient = useQueryClient();
+
+  const { companyId, idAccount } = useParams<{
+    companyId: string;
+    idAccount: string;
+  }>();
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const backTo = (location.state as any)?.backTo as string | undefined;
 
   // 1) Traer categorías anidadas por empresa
-const { data: catsResp, isLoading: catsLoading, isError: catsError, error } = useQuery({
-  queryKey: ["v2:company-categories", companyId],
-  queryFn: () => getCategoriesOverloadAction(companyId!),
-  enabled: !!companyId,
-  staleTime: 5 * 60 * 1000,
-  refetchOnWindowFocus: false,
-});
+  const {
+    data: catsResp,
+    isLoading: catsLoading,
+    isError: catsError,
+    error,
+  } = useQuery({
+    queryKey: ["v2:company-categories", companyId],
+    queryFn: () => getCategoriesOverloadAction(companyId!),
+    enabled: !!companyId,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
-const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]);
+  const { data: budgetsResp, isLoading: budgetsLoading } = useQuery<Budget[]>({
+    queryKey: ["v2:budgets", idAccount],
+    queryFn: async () => {
+      const resp: BudgetsByAccountResponse = await getBudgetsAction(idAccount!);
+      return resp.budgets; // <- devolvemos el array
+    },
+    enabled: !!idAccount,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
- // 2) Construir árbol SIN budgets (budgetsByLeaf = {})
+  const categories = useMemo(
+    () => catsResp?.company?.categories ?? [],
+    [catsResp]
+  );
+
+  const budgetsByLeaf = useMemo<Record<string, MonthlyBudget>>(() => {
+    const map: Record<string, MonthlyBudget> = {};
+    (budgetsResp ?? []).forEach((b) => {
+      if (b.year !== fiscalYear) return;
+      if (b.account !== idAccount) return;
+
+      // soporta ._id o .id y, si llegara a venir a nivel subcategory, también
+      const leafId =
+        (b as any).subsubcategory?._id ??
+        (b as any).subsubcategory?.id ??
+        (b as any).subcategory?._id ??
+        (b as any).subcategory?.id;
+
+      if (!leafId) return;
+
+      map[leafId] ||= {};
+      map[leafId][b.month] = (map[leafId][b.month] || 0) + b.amount;
+    });
+    return map;
+  }, [budgetsResp, idAccount, fiscalYear]);
+
+  // 2) Construir árbol SIN budgets (budgetsByLeaf = {})
   const tree = useMemo(() => {
-    const root = buildHierarchyFromNested(categories, {});
-    calculateTotals(root); // todos 0 por ahora
+    const root = buildHierarchyFromNested(categories, budgetsByLeaf);
+    calculateTotals(root);
     return root;
-  }, [categories]);
+  }, [categories, budgetsByLeaf]);
 
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]); // recalcula totales (defensivo)
 
@@ -165,10 +225,14 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
     setExpanded(next);
   };
 
-    const getMonthTotal = (nodes: CategoryWithBudgets[], month: number): number => {
+  const getMonthTotal = (
+    nodes: CategoryWithBudgets[],
+    month: number
+  ): number => {
     let sum = 0;
     for (const n of nodes) {
-      if (n.children && n.children.length) sum += getMonthTotal(n.children, month);
+      if (n.children && n.children.length)
+        sum += getMonthTotal(n.children, month);
       else sum += n.budgets[month] || 0; // siempre 0 por ahora
     }
     return sum;
@@ -199,47 +263,115 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
     return map;
   }, [categories]);
 
-  /* const saveBudget = () => {
-    if (!editingCell) return;
-    const amount = parseFloat(editValue) || 0;
-    const [kind, id] = editingCell.nodeKey.split(":");
-    if (kind !== "SUBSUBCATEGORY") return; // seguridad: solo hojas
+  const getId = (x: any) => String(x?.id ?? x?._id ?? x);
 
-    const month = editingCell.month;
-
-   setBudgets((prev) => {
-      // buscamos si existe un registro para esa hoja/mes/año
-      const idx = prev.findIndex(
+  const upsertBudget = useMutation({
+    mutationFn: async ({ leafId, month, amount }: UpsertVars) => {
+      const existing: Budget | undefined = (budgetsResp ?? []).find(
         (b) =>
-          b.subsubcategory._id === id &&
+          getId((b as any).subsubcategory) === leafId &&
           b.month === month &&
           b.year === fiscalYear &&
-          b.account === accountId
+          b.account === idAccount
       );
 
-      if (idx >= 0) {
-        // actualizar
-        const next = [...prev];
-        next[idx] = { ...next[idx], amount };
-        return next;
-      }
-      const subsub = subsubIndex.get(id);
-      if (!subsub) return prev;
-      return [
-        ...prev,
-        {
-          id: `b-${Date.now()}`,
-          subsubcategory: subsub,
-          month,
-          year: fiscalYear,
+      if (existing) {
+        // ---- Si mandan 0 ----
+        if (amount === 0) {
+          await deleteBudgetAction(existing.id);
+          return null as any;
+        }
+        // -------- UPDATE: mandar SOLO el id --------
+        return updateBudgetAction(existing.id, {
+          ...existing,
           amount,
-          account: accountId,
-        },
-      ];
-    });
+          subsubcategory: getId((existing as any).subsubcategory), // <— SOLO ID
+        } as any);
+      }
 
+      if (amount === 0) {
+        // no-op
+        return null as any;
+      }
+
+      // -------- CREATE: mandar SOLO el id --------
+      return createBudgetAction({
+        year: fiscalYear!,
+        month,
+        account: idAccount!,
+        amount,
+        subsubcategory: leafId, // <— SOLO ID
+      } as any);
+    },
+
+    onMutate: async ({ leafId, month, amount }: UpsertVars) => {
+      await queryClient.cancelQueries({ queryKey: ["v2:budgets", idAccount] });
+      const prev =
+        queryClient.getQueryData<Budget[]>(["v2:budgets", idAccount]) ?? [];
+
+      const i = prev.findIndex(
+        (b) =>
+          getId((b as any).subsubcategory) === leafId &&
+          b.month === month &&
+          b.year === fiscalYear &&
+          b.account === idAccount
+      );
+
+      let next: Budget[];
+      if (i >= 0) {
+        next = [...prev];
+        next[i] = { ...prev[i], amount };
+      } else {
+        // Para el optimista puedes dejar el objeto (no afecta al server porque esto no se envía)
+        const subsub = subsubIndex.get(leafId);
+        next = [
+          ...prev,
+          {
+            id: `temp-${Date.now()}`,
+            year: fiscalYear!,
+            month,
+            account: idAccount!,
+            amount,
+            subsubcategory: subsub as any,
+          },
+        ];
+      }
+
+      queryClient.setQueryData(["v2:budgets", idAccount], next);
+      return { prev };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(["v2:budgets", idAccount], ctx.prev);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["v2:budgets", idAccount] });
+    },
+  });
+
+  // ---- Tu handler de guardar ----
+  const saveBudget = () => {
+    if (!editingCell) return;
+    const amount = parseFloat(editValue) || 0;
+    const [kind, leafId] = editingCell.nodeKey.split(":");
+    if (kind !== "SUBSUBCATEGORY") return;
+
+    upsertBudget.mutate({ leafId, month: editingCell.month, amount });
     cancelEditing();
-  }; */
+  };
+
+  const handleBack = () => {
+    if (backTo) {
+      navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
+    } else if (companyId) {
+      // fallback razonable a la vista de la empresa con la cuenta activa marcada
+      navigate(`/company/${companyId}?a=${idAccount}`, { replace: true });
+    } else {
+      navigate(-1); // último recurso
+    }
+  };
 
   const renderRow = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
     const hasChildren = !!(node.children && node.children.length);
@@ -311,14 +443,14 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
                         onKeyDown={(e) => {
-                          //if (e.key === "Enter") saveBudget();
+                          if (e.key === "Enter") saveBudget();
                           if (e.key === "Escape") cancelEditing();
                         }}
                         className="w-24 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                         autoFocus
                       />
                       <button
-                        //onClick={saveBudget}
+                        onClick={saveBudget}
                         className="p-1 text-green-600 hover:bg-green-100 rounded"
                       >
                         <Save className="w-4 h-4" />
@@ -343,12 +475,7 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
                   )
                 ) : (
                   <span className="text-sm font-semibold text-gray-700">
-                    {hasChildren && isExpanded
-                      ? formatCurrency(
-                          monthlyTotals[monthIndex] ||
-                            getMonthTotal(node.children || [], month)
-                        )
-                      : "-"}
+                    {formatCurrency(getMonthTotal(node.children || [], month))}
                   </span>
                 )}
               </td>
@@ -392,7 +519,7 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
               </span>
             </div>
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="px-4 py-2 text-gray-600 hover:text-gray-800"
             >
               Volver al Dashboard
@@ -461,4 +588,4 @@ const categories = useMemo(() => catsResp?.company?.categories ?? [], [catsResp]
       </div>
     </div>
   );
-}
+};

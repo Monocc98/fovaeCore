@@ -1,4 +1,3 @@
-import { useHomeStore } from "@/home/hooks/useHomeStore";
 import { DollarSign } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 
@@ -10,7 +9,10 @@ export const BudgetButton = () => {
 
   const handleOnCLick = () => {
     // const year = new Date().getFullYear();
-    navigate(`/v2/company/${companyId}/budget/${accountId}`); //?year=${year}
+    const backTo = location.pathname + location.search;
+    navigate(`/company/${companyId}/budget/${accountId}`, {
+      state: { backTo },
+    }); //?year=${year}
   };
 
   return (

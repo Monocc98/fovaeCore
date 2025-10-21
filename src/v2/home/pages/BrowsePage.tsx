@@ -172,9 +172,9 @@ export const BrowsePage = () => {
                       content={g.content}
                       onClick={(content: any) => {
                         if (level === "groups") {
-                          navigate(`/v2/group/${g.id}?c=${content._id}`);
+                          navigate(`/group/${g.id}?c=${content._id}`);
                         } else if (level === "companies") {
-                          navigate(`/v2/company/${g.id}?a=${content._id}`);
+                          navigate(`/company/${g.id}?a=${content._id}`);
                         }
                       }}
                     />

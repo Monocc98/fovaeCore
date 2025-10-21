@@ -14,36 +14,6 @@ import { CategoriesPage } from "@/categories/pages/CategoriesPage";
 
 export const appRouter = createBrowserRouter([
   // LEGACY PATH
-  {
-    path: "/",
-    element: <HomeLayout />,
-    children: [
-      {
-        index: true,
-        element: <HomeContainer />,
-      },
-      {
-        path: "movement/:idMovement/edit",
-        element: <MovementsUpsertPage />,
-      },
-      {
-        path: "movement/new/:idAccount",
-        element: <MovementsUpsertPage />,
-      },
-      {
-        path: "categories/:idAccount",
-        element: <CategoriesPage />,
-      },
-      {
-        path: "budget/:idAccount",
-        element: <BudgetPage />,
-      },
-      // {
-      //   path: "*",
-      //   element: <Navigate to="/" />,
-      // },
-    ],
-  },
 
   {
     path: "/auth",
@@ -58,7 +28,7 @@ export const appRouter = createBrowserRouter([
 
   // V2 PROTOTIPO
   {
-    path: "/v2",
+    path: "/",
     element: <HomeLayoutV2 />,
     children: [
       //Nivel 1: grupos
