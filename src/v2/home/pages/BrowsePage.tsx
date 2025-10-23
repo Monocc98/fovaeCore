@@ -71,7 +71,7 @@ export const BrowsePage = () => {
 
     if (level === "groups") {
       return overlay.groups.map((g) => ({
-        id: g._id,
+        id: g.id,
         name: g.name,
         balance: g.balance,
         content: g.companies,
@@ -79,7 +79,7 @@ export const BrowsePage = () => {
     }
 
     if (level === "companies") {
-      const group = overlay.groups.find((g) => g._id === groupId);
+      const group = overlay.groups.find((g) => g.id === groupId);
       const companies = group?.companies ?? [];
       return companies.map((c) => ({
         id: c.id,
@@ -172,9 +172,9 @@ export const BrowsePage = () => {
                       content={g.content}
                       onClick={(content: any) => {
                         if (level === "groups") {
-                          navigate(`/group/${g.id}?c=${content._id}`);
+                          navigate(`/group/${g.id}?c=${content.id}`);
                         } else if (level === "companies") {
-                          navigate(`/company/${g.id}?a=${content._id}`);
+                          navigate(`/company/${g.id}?a=${content.id}`);
                         }
                       }}
                     />
