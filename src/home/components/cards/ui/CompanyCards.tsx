@@ -1,4 +1,3 @@
-import { useHomeStore } from "@/home/hooks/useHomeStore";
 import type { Account } from "@/home/types/account.interface";
 import type { Company } from "@/home/types/comany.interface";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
@@ -33,7 +32,7 @@ export const CompanyCards = ({ content, onClick }: Props) => {
 
   return (
     <div
-      key={content._id}
+      key={content.id}
       className={`cursor-pointer flex items-center justify-between p-3 rounded-lg border ${getBalanceColor(
         content.balance
       )}`}
