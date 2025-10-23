@@ -42,7 +42,7 @@ export const AccountsCard = <T extends Content>({
       ) : (
         content.map((content) => (
           <CompanyCards
-            key={content._id}
+            key={content.id}
             content={content}
             onClick={() => onClick?.(content as T)}
           />

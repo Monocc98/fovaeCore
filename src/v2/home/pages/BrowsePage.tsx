@@ -82,7 +82,7 @@ export const BrowsePage = () => {
       const group = overlay.groups.find((g) => g._id === groupId);
       const companies = group?.companies ?? [];
       return companies.map((c) => ({
-        id: c._id,
+        id: c.id,
         name: c.name,
         balance: c.balance,
         content: c.accounts,
@@ -92,9 +92,9 @@ export const BrowsePage = () => {
     if (level === "accounts") {
       for (const group of overlay.groups) {
         for (const company of group.companies) {
-          if (company._id === companyId) {
+          if (company.id === companyId) {
             return company.accounts.map((a) => ({
-              id: a._id,
+              id: a.id,
               name: a.name,
               balance: a.balance,
             }));

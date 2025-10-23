@@ -3,7 +3,6 @@ import { getLevelBadge, getScopeBadge } from "@/helpers";
 import { useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useHomeStore } from "@/home/hooks/useHomeStore";
 import {
   createCategoryAction,
   createSubcategoryAction,
@@ -51,7 +50,6 @@ export const CategoriesPage = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<Row | null>(null);
   const [showForm, setShowForm] = useState(false);
 
-  const { activeCompanyId } = useHomeStore();
   const queryClient = useQueryClient();
 
   const navigate = useNavigate();
@@ -81,7 +79,7 @@ export const CategoriesPage = () => {
     handleSubmit,
     watch,
     reset,
-    formState: { errors },
+    // formState: { errors },
   } = useForm<CategoryFormValues>({
     defaultValues: {
       name: "",
@@ -93,7 +91,7 @@ export const CategoriesPage = () => {
   });
 
   const level = watch("level");
-  const scope = watch("scope");
+  // const scope = watch("scope");
 
   const rows: Row[] = useMemo(() => {
     const acc: Row[] = [];
@@ -342,11 +340,11 @@ export const CategoriesPage = () => {
     setShowForm(true);
   };
 
-  const handleCancelForm = () => {
-    reset();
-    setEditingId(null);
-    setShowForm(false);
-  };
+  // const handleCancelForm = () => {
+  //   reset();
+  //   setEditingId(null);
+  //   setShowForm(false);
+  // };
 
   const handleDeleteClick = (category: Row) => {
     setCategoryToDelete(category);

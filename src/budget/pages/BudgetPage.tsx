@@ -75,15 +75,15 @@ function calculateTotals(nodes: CategoryWithBudgets[]): number {
 /**
  * Suma un mes específico recorriendo el árbol (solo hojas tienen budgets)
  */
-function getMonthTotal(nodes: CategoryWithBudgets[], month: number): number {
-  let sum = 0;
-  for (const n of nodes) {
-    if (n.children && n.children.length)
-      sum += getMonthTotal(n.children, month);
-    else sum += n.budgets[month] || 0;
-  }
-  return sum;
-}
+// function getMonthTotal(nodes: CategoryWithBudgets[], month: number): number {
+//   let sum = 0;
+//   for (const n of nodes) {
+//     if (n.children && n.children.length)
+//       sum += getMonthTotal(n.children, month);
+//     else sum += n.budgets[month] || 0;
+//   }
+//   return sum;
+// }
 
 /* ============================
  * Builder ANIDADO (único a usar)
@@ -160,9 +160,9 @@ Props) => {
   // 1) Traer categorías anidadas por empresa
   const {
     data: catsResp,
-    isLoading: catsLoading,
-    isError: catsError,
-    error,
+    // isLoading: catsLoading,
+    // isError: catsError,
+    // error,
   } = useQuery({
     queryKey: ["v2:company-categories", companyId],
     queryFn: () => getCategoriesOverloadAction(companyId!),
@@ -171,7 +171,8 @@ Props) => {
     refetchOnWindowFocus: false,
   });
 
-  const { data: budgetsResp, isLoading: budgetsLoading } = useQuery<Budget[]>({
+  // isLoading: budgetsLoading
+  const { data: budgetsResp } = useQuery<Budget[]>({
     queryKey: ["v2:budgets", idAccount],
     queryFn: async () => {
       const resp: BudgetsByAccountResponse = await getBudgetsAction(idAccount!);
@@ -380,7 +381,7 @@ Props) => {
     const rowKey = `${node.kind}:${node._id}`;
     const isExpanded = expanded.has(rowKey);
 
-    const monthlyTotals = MONTHS.map((_, i) => node.budgets?.[i + 1] || 0);
+    // const monthlyTotals = MONTHS.map((_, i) => node.budgets?.[i + 1] || 0);
 
     return (
       <React.Fragment key={rowKey}>

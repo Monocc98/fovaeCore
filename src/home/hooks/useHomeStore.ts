@@ -37,10 +37,10 @@ export const useHomeStore = () => {
     const currentGroup = groups.find( group => group._id === activeGroupId) ?? null;
 
     const companies = currentGroup?.companies ?? [];
-    const currentCompany = companies?.find( company => company._id === activeCompanyId ) ?? null;
+    const currentCompany = companies?.find( company => company.id === activeCompanyId ) ?? null;
 
     const accounts = currentCompany?.accounts ?? [];
-    const currentAccount = accounts?.find( account => account._id === activeAccountId ) ?? null;
+    const currentAccount = accounts?.find( account => account.id === activeAccountId ) ?? null;
 
     const startHome = ( homeResponse: HomeResponse) => {
         dispatch( onInitFormHome(homeResponse));
@@ -67,8 +67,8 @@ export const useHomeStore = () => {
     const tabsItems: TabsItem[] = mode === "group"
         ? groups.map( group => ({ id: group._id, name: group.name, content: currentGroup?.companies, balance: currentGroup?.balance }) )
         : ( mode === "company" ) 
-            ? companies.map( company => ({ id: company._id, name: company.name, content: currentCompany?.accounts, balance: currentCompany?.balance }) )
-            : accounts.map( account => ({ id: account._id, name: account.name, content: [], balance: account.balance }) )
+            ? companies.map( company => ({ id: company.id, name: company.name, content: currentCompany?.accounts, balance: currentCompany?.balance }) )
+            : accounts.map( account => ({ id: account.id, name: account.name, content: [], balance: account.balance }) )
 
     const restoreHomeSnapshot = (snap: {
         mode: "group" | "company" | "account";

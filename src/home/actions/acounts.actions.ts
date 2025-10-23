@@ -4,7 +4,9 @@ import type { Account, AccountsResponse } from "../types/account.interface";
 export const getAccountsAction = async(idCompany: string):Promise<AccountsResponse> => {
     const { data } = await fovaeCoreApi.get<AccountsResponse>(`/accounts/${idCompany}`);
 
-    return data;
+    return {
+        ...data
+    };
 }
 
 export const createAccountAction = async(payload: Account): Promise<Account> => {

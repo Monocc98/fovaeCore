@@ -1,10 +1,5 @@
 import type { Row } from "@/categories/pages/CategoriesPage";
 import { getLevelBadge, getScopeBadge } from "@/helpers";
-import type {
-  Category,
-  Subcategory,
-  Subsubcategory,
-} from "@/home/types/categories.interfaces";
 import { Trash2 } from "lucide-react";
 
 interface Props {

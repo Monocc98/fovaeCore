@@ -1,4 +1,3 @@
-import { useHomeStore } from "@/home/hooks/useHomeStore";
 import { LibraryBig } from "lucide-react";
 import { useLocation, useNavigate, useParams } from "react-router";
 

@@ -7,7 +7,7 @@ import {
   getTransactionIcon,
 } from "@/helpers";
 import { deleteMovementAction } from "@/home/actions/movements.actions";
-import { useHomeStore } from "@/home/hooks/useHomeStore";
+// import { useHomeStore } from "@/home/hooks/useHomeStore";
 import type { Movement } from "@/home/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
@@ -32,8 +32,8 @@ export const MovementsTableCard = ({
   movements = [],
   filters,
   onChangeFilters,
-  accountId,
-}: Props) => {
+}: // accountId,
+Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
   );
@@ -44,8 +44,6 @@ export const MovementsTableCard = ({
 
   const idAccount = searchParams.get("a") || undefined;
 
-  const [searchTerm, setSearchTerm] = useState("");
-
   // Normaliza texto: minúsculas, sin acentos, sin espacios extra
   const normalize = (v: unknown) =>
     String(v ?? "")
@@ -53,10 +51,6 @@ export const MovementsTableCard = ({
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
       .trim();
-
-  // Para que el UI no "salte" mientras se escribe
-  const deferredSearch = useDeferredValue(searchTerm);
-  const normalizedQuery = normalize(deferredSearch);
 
   const queryClient = useQueryClient();
 

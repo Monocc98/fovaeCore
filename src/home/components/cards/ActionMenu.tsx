@@ -1,4 +1,3 @@
-import { Building2 } from "lucide-react";
 import { AdminCategoriesButton } from "../actionMenu/AdminCategoriesButton";
 import { BudgetButton } from "../actionMenu/BudgetButton";
 import { AdminAccountsButton } from "../actionMenu/AdminAccountsButton";
