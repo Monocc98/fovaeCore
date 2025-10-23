@@ -1,7 +1,7 @@
 import { Outlet, useOutletContext } from "react-router";
 import type { OutletContext as V2OutletContext } from "@/v2/home/layouts/HomeLayoutV2";
 
-export const CompanyLayout = () => {
+export const ContainerLayout = () => {
   // toma el contexto del padre (HomeLayoutV2)
   const parentCtx = useOutletContext<V2OutletContext>(); // { overlay?: HomeResponse }
 

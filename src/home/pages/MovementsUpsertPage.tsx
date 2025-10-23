@@ -8,7 +8,6 @@ import {
 } from "../actions/movements.actions";
 import { useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { useHomeStore } from "../hooks/useHomeStore";
 import { getCategoriesOverloadAction } from "../actions/categories.actions";
 import { formatDate, getStatusBadge, getTransactionColor } from "@/helpers";
 import type { CategoriesResponse } from "../types/companiesResponse.interface";
@@ -29,8 +28,7 @@ type FormValues = {
 };
 
 export const MovementsUpsertPage = () => {
-  const { idMovement, idAccount } = useParams();
-  const { activeCompanyId } = useHomeStore();
+  const { idMovement, idAccount, companyId } = useParams();
   // const { parentCategories } = useCategories(); Pensar en como usar aquí
 
   const mode: "edit" | "create" | "invalid" = idMovement
@@ -53,9 +51,9 @@ export const MovementsUpsertPage = () => {
   });
 
   const categoriesQuery = useQuery<CategoriesResponse>({
-    queryKey: ["categories", activeCompanyId],
-    queryFn: () => getCategoriesOverloadAction(activeCompanyId!),
-    enabled: !!activeCompanyId,
+    queryKey: ["categories", companyId],
+    queryFn: () => getCategoriesOverloadAction(companyId!),
+    enabled: !!companyId,
   });
 
   const today = new Date().toISOString().slice(0, 10);
@@ -159,15 +157,17 @@ export const MovementsUpsertPage = () => {
         // Si tu API espera 'subsubcategoryId', asegúrate de enviarlo:
         subsubcategory: payload.subsubcategory,
       } as any),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["movements", idAccount] });
-
-      const homeSnap = (location.state as any)?.homeSnapshot ?? null;
-      // navigate(`/movement/${data.id}/edit`);
-      navigate("/", {
-        replace: true,
-        state: homeSnap ? { restoreHome: homeSnap } : null,
+    onSuccess: async () => {
+      queryClient.invalidateQueries({
+        queryKey: ["movementsOverlay", idAccount],
       });
+      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+      await queryClient.refetchQueries({
+        queryKey: ["homeOverlay"],
+        type: "active",
+      });
+
+      navigate(-1);
     },
   });
 
@@ -179,14 +179,16 @@ export const MovementsUpsertPage = () => {
         subcategoryId: undefined,
         subsubcategory: payload.subsubcategory,
       } as any),
-    onSuccess: (data: any) => {
+    onSuccess: async (data: any) => {
+      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+      await queryClient.refetchQueries({
+        queryKey: ["homeOverlay"],
+        type: "active",
+      });
+
       queryClient.setQueryData(["movement", idMovement], data);
       // queryClient.invalidateQueries({ queryKey: ["movements", data.account] });
-      const homeSnap = (location.state as any)?.homeSnapshot ?? null;
-      navigate("/", {
-        replace: true,
-        state: homeSnap ? { restoreHome: homeSnap } : null,
-      });
+      navigate(-1);
     },
   });
 

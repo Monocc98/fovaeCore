@@ -1,6 +1,11 @@
+export type AccountsResponse = { accounts: Account[] };
+
+export type AccountType = "MOVEMENTS" | "INVESTMENT" | "CASH";
+
 export interface Account {
-    _id:     string;
+    id:     string;
     name:    string;
-    type:    string;
+    type:    AccountType;
     balance: number;
+    company?: string;
 }

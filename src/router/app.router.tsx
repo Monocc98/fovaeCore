@@ -1,6 +1,6 @@
 import { AccountLayout } from "@/accounts/layouts/AccountLayout";
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
-import { LoginPage } from "@/auth/pages/LoginPage";
+// import { LoginPage } from "@/auth/pages/LoginPage";
 import { HomeContainer } from "@/home/layouts/HomeContainer";
 import { HomeLayout } from "@/home/layouts/HomeLayout";
 import { BrowsePage } from "@/v2/home/pages/BrowsePage";
@@ -8,9 +8,10 @@ import { MovementsPage } from "@/home/pages/MovementsPage";
 import { MovementsUpsertPage } from "@/home/pages/MovementsUpsertPage";
 import { HomeLayoutV2 } from "@/v2/home/layouts/HomeLayoutV2";
 import { createBrowserRouter, Navigate } from "react-router";
-import { CompanyLayout } from "@/v2/home/layouts/CompanyLayout";
+import { ContainerLayout } from "@/v2/home/layouts/ContainerLayout";
 import { BudgetPage } from "@/budget/pages/BudgetPage";
 import { CategoriesPage } from "@/categories/pages/CategoriesPage";
+import { AccountsPage } from "@/accounts/pages/AccountsPage";
 
 export const appRouter = createBrowserRouter([
   // LEGACY PATH
@@ -19,10 +20,10 @@ export const appRouter = createBrowserRouter([
     path: "/auth",
     element: <AuthLayout />,
     children: [
-      {
-        index: true,
-        element: <LoginPage />,
-      },
+      // {
+      //   index: true,
+      //   element: <LoginPage />,
+      // },
     ],
   },
 
@@ -35,11 +36,21 @@ export const appRouter = createBrowserRouter([
       { index: true, element: <BrowsePage /> },
 
       // Nivel 2: empresas de un grupo
-      { path: "group/:groupId", element: <BrowsePage /> },
+      {
+        path: "group/:groupId",
+        element: <ContainerLayout />,
+        children: [
+          { index: true, element: <BrowsePage /> },
+          {
+            path: "accounts/:companyId",
+            element: <AccountsPage />,
+          },
+        ],
+      },
 
       {
         path: "company/:companyId",
-        element: <CompanyLayout />,
+        element: <ContainerLayout />,
         children: [
           { index: true, element: <BrowsePage /> },
           {

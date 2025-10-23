@@ -21,12 +21,12 @@ export const FinancialSummary = ({ balance = 0 }: Props) => {
           </span>
         </div>
       </div>
-      <div className="bg-green-50 p-4 rounded-lg">
+      {/* <div className="bg-green-50 p-4 rounded-lg">
         <div className="flex items-center justify-between">
           <span className="text-sm text-green-700">Crecimiento Mensual</span>
           <span className="font-bold text-green-900">+5%</span>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

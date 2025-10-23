@@ -254,7 +254,7 @@ function AccountsSection({
   onChangeFilters: (f: MovementsFilters) => void;
 }) {
   const { data } = useQuery({
-    queryKey: ["v2:account-movements", accountId],
+    queryKey: ["movementsOverlay", accountId],
     queryFn: () => getMovementsAction(accountId),
     enabled: !!accountId,
     refetchOnWindowFocus: false,

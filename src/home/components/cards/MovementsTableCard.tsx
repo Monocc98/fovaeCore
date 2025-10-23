@@ -12,7 +12,12 @@ import type { Movement } from "@/home/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import {
+  useLocation,
+  useNavigate,
+  useParams,
+  useSearchParams,
+} from "react-router";
 import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
 import type { MovementsFilters } from "@/home/types/movements-filters.interface";
 
@@ -35,6 +40,9 @@ export const MovementsTableCard = ({
 
   const location = useLocation();
   const { companyId } = useParams<{ companyId: string }>();
+  const [searchParams] = useSearchParams();
+
+  const idAccount = searchParams.get("a") || undefined;
 
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -54,8 +62,13 @@ export const MovementsTableCard = ({
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteMovementAction(id),
-    onSuccess: (_data, _id) => {
+    onSuccess: async (_data, _id) => {
       // refresca la lista
+      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+      await queryClient.refetchQueries({
+        queryKey: ["homeOverlay"],
+        type: "active",
+      });
       queryClient.invalidateQueries({ queryKey: ["movementsOverlay"] });
       setMovementToDelete(null);
     },
@@ -118,14 +131,11 @@ export const MovementsTableCard = ({
   }, [movements, q, filters]);
 
   const navigate = useNavigate();
-  const { mode, activeGroupId, activeCompanyId, activeAccountId } =
-    useHomeStore();
 
   const handleNewMovimiento = () => {
     const backTo = location.pathname + location.search;
-    navigate(`/v2/company/${companyId}/movement/new/${activeAccountId}`, {
+    navigate(`/company/${companyId}/movement/new/${idAccount}`, {
       state: {
-        homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
         state: { backTo },
       },
     });
@@ -133,9 +143,8 @@ export const MovementsTableCard = ({
 
   const handleEditMovement = (idMovement: string) => {
     const backTo = location.pathname + location.search;
-    navigate(`/v2/company/${companyId}/movement/${idMovement}/edit`, {
+    navigate(`/company/${companyId}/movement/${idMovement}/edit`, {
       state: {
-        homeSnapshot: { mode, activeGroupId, activeCompanyId, activeAccountId },
         state: { backTo },
       },
     });

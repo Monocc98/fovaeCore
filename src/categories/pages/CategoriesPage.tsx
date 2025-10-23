@@ -66,9 +66,9 @@ export const CategoriesPage = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const categoriesQuery = useQuery<CategoriesResponse>({
-    queryKey: ["categories", idAccount],
-    queryFn: () => getCategoriesOverloadAction(idAccount!),
-    enabled: !!idAccount,
+    queryKey: ["categories", companyId],
+    queryFn: () => getCategoriesOverloadAction(companyId!),
+    enabled: !!companyId,
   });
 
   const companyName = categoriesQuery.data?.company?.name;
@@ -207,28 +207,28 @@ export const CategoriesPage = () => {
           name: payload.name,
           scope: payload.scope,
           type: payload.type,
-          company: activeCompanyId!,
+          company: companyId!,
         } as any);
       } else if (payload.level === "subcategory") {
         return createSubcategoryAction({
           name: payload.name,
           scope: payload.scope,
           parent: payload.parentId,
-          company: activeCompanyId!,
+          company: companyId!,
         } as any);
       } else if (payload.level === "subsubcategory") {
         return createSubsubcategoryAction({
           name: payload.name,
           scope: payload.scope,
           parent: payload.parentId,
-          company: activeCompanyId!,
+          company: companyId!,
         } as any);
       }
     },
     onSuccess: () => {
       // refresca las categorías
       queryClient.invalidateQueries({
-        queryKey: ["categories", activeCompanyId],
+        queryKey: ["categories", companyId],
       });
       reset();
     },
@@ -247,7 +247,7 @@ export const CategoriesPage = () => {
           name: data.name,
           scope: data.scope,
           type: data.type,
-          company: activeCompanyId!,
+          company: companyId!,
         } as any);
       }
 
@@ -256,7 +256,7 @@ export const CategoriesPage = () => {
           name: data.name,
           scope: data.scope,
           parent: data.parentId, // padre = category
-          company: activeCompanyId!,
+          company: companyId!,
         } as any);
       }
 
@@ -265,12 +265,12 @@ export const CategoriesPage = () => {
         name: data.name,
         scope: data.scope,
         parent: data.parentId, // padre = subcategory
-        company: activeCompanyId!,
+        company: companyId!,
       } as any);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["categories", activeCompanyId],
+        queryKey: ["categories", companyId],
       });
       reset();
       setEditingId(null);
@@ -292,7 +292,7 @@ export const CategoriesPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["categories", activeCompanyId],
+        queryKey: ["categories", companyId],
       });
       reset;
       setCategoryToDelete(null);
