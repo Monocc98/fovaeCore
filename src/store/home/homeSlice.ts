@@ -39,7 +39,7 @@ export const homeSlice = createSlice({
 
         const groups = home.groups??[];
         state.activeGroupId = groups.length  
-                                ? groups[0]._id
+                                ? groups[0].id
                                 : null
         state.activeCompanyId = null;
         state.activeAccountId = null;
@@ -54,7 +54,7 @@ export const homeSlice = createSlice({
 
         const groups = home.groups??[];
         state.activeGroupId = groups.length  
-                                ? groups[0]._id
+                                ? groups[0].id
                                 : null
         state.activeCompanyId = null;
         state.activeAccountId = null;
