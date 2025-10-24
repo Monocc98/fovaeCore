@@ -13,6 +13,9 @@ export const AccountsCard = <T extends Content>({
   content = [],
   onClick,
 }: Props<T>) => {
+  const getKey = (x: { id?: string; _id?: string; name?: string }, i: number) =>
+    x.id ?? (x as any)._id ?? `${i}-${x.name ?? "item"}`;
+
   return (
     <div className="space-y-3">
       {content.length === 0 ? (
@@ -40,11 +43,11 @@ export const AccountsCard = <T extends Content>({
           </p>
         </div>
       ) : (
-        content.map((content) => (
+        content.map((item, i) => (
           <CompanyCards
-            key={content.id}
-            content={content}
-            onClick={() => onClick?.(content as T)}
+            key={getKey(item, i)}
+            content={item}
+            onClick={() => onClick?.(item as T)}
           />
         ))
       )}
