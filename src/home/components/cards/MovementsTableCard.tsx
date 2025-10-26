@@ -55,16 +55,52 @@ Props) => {
   const queryClient = useQueryClient();
 
   const deleteMut = useMutation({
-    mutationFn: (id: string) => deleteMovementAction(id),
-    onSuccess: async (_data, _id) => {
-      // refresca la lista
-      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
-      await queryClient.refetchQueries({
-        queryKey: ["homeOverlay"],
-        type: "active",
+    // ahora recibe { id, accountId }
+    mutationFn: ({ id }: { id: string; accountId: string }) =>
+      deleteMovementAction(id),
+
+    // 🔹 Optimistic update
+    onMutate: async ({ id, accountId }) => {
+      await queryClient.cancelQueries({
+        queryKey: ["movementsOverlay", accountId],
       });
-      queryClient.invalidateQueries({ queryKey: ["movementsOverlay"] });
-      setMovementToDelete(null);
+
+      const prev = queryClient.getQueryData<any>([
+        "movementsOverlay",
+        accountId,
+      ]);
+
+      // Ajusta a la forma real de tu respuesta: { movements: Movement[] } o Movement[]
+      const next = prev?.movements
+        ? {
+            ...prev,
+            movements: prev.movements.filter(
+              (m: any) => (m.id ?? m._id) !== id
+            ),
+          }
+        : Array.isArray(prev)
+        ? prev.filter((m: any) => (m.id ?? m._id) !== id)
+        : prev;
+
+      queryClient.setQueryData(["movementsOverlay", accountId], next);
+
+      return { prev, accountId };
+    },
+
+    // 🔹 Si falla, rollback
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) {
+        queryClient.setQueryData(["movementsOverlay", ctx.accountId], ctx.prev);
+      }
+    },
+
+    // 🔹 Al terminar, asegura refetch con clave EXACTA
+    onSettled: async (_data, _err, vars) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["movementsOverlay", vars.accountId],
+      });
+      // Si el balance cambia, refresca el overlay también
+      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
     },
   });
 
@@ -152,7 +188,8 @@ Props) => {
 
   const confirmDelete = () => {
     if (!movementToDelete) return;
-    deleteMut.mutate(movementToDelete.id);
+    const accountId = idAccount!; // el que ya lees del search param "a"
+    deleteMut.mutate({ id: movementToDelete.id, accountId });
   };
 
   return (

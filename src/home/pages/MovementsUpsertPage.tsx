@@ -171,6 +171,11 @@ export const MovementsUpsertPage = () => {
     },
   });
 
+  const oldMovement = queryClient.getQueryData<any>(["movement", idMovement]);
+  const oldAccountId = String(
+    oldMovement?.movement?.account ?? oldMovement?.account ?? ""
+  );
+
   const updateMut = useMutation({
     mutationFn: (payload: FormValues) =>
       updateMovementAction(idMovement!, {
@@ -180,14 +185,19 @@ export const MovementsUpsertPage = () => {
         subsubcategory: payload.subsubcategory,
       } as any),
     onSuccess: async (data: any) => {
+      const updated = data?.movement ?? data;
+      const newAccountId = String(updated?.account ?? "");
+      if (oldAccountId)
+        await queryClient.invalidateQueries({
+          queryKey: ["movementsOverlay", oldAccountId],
+        });
+      if (newAccountId && newAccountId !== oldAccountId) {
+        await queryClient.invalidateQueries({
+          queryKey: ["movementsOverlay", newAccountId],
+        });
+      }
       await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
-      await queryClient.refetchQueries({
-        queryKey: ["homeOverlay"],
-        type: "active",
-      });
-
       queryClient.setQueryData(["movement", idMovement], data);
-      // queryClient.invalidateQueries({ queryKey: ["movements", data.account] });
       navigate(-1);
     },
   });
