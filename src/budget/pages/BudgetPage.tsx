@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Edit2, Save, X } from "lucide-react";
 import { formatCurrency } from "@/helpers";
 import type {
@@ -17,6 +17,8 @@ import {
   updateBudgetAction,
   type BudgetsByAccountResponse,
 } from "@/home/actions/budget.actions";
+import { getFiscalYearsAction } from "@/home/actions/fiscalYear.actions";
+import type { FiscalYear } from "@/home/types/fiscalYear.interface";
 
 export interface MonthlyBudget {
   [month: number]: number; // { 1: 1000, 2: 0, ... }
@@ -54,6 +56,26 @@ const MONTHS = [
   "Noviembre",
   "Diciembre",
 ];
+
+const makeFiscalCalendar = (startMonth: number) => {
+  const startIdx = (startMonth - 1 + 12) % 12;
+
+  // cabecera rotada: p.ej. startMonth=8 -> ["Agosto","Septiembre",...,"Julio"]
+  const header = [
+    ...MONTHS.slice(startIdx),
+    ...MONTHS.slice(0, startIdx),
+  ];
+
+  // convierte posición fiscal (1–12) -> mes calendario (1–12)
+  const fiscalPosToCalendar = (pos: number) =>
+    ((startIdx + (pos - 1)) % 12) + 1;
+
+  // convierte mes calendario (1–12) -> posición fiscal (1–12)
+  const calendarToFiscalPos = (cal: number) =>
+    ((cal - startMonth + 12) % 12) + 1;
+
+  return { header, fiscalPosToCalendar, calendarToFiscalPos };
+};
 
 /**
  * Calcula totales (anual) bottom-up y retorna el total del arreglo
@@ -170,6 +192,42 @@ Props) => {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  const fiscalYearsQuery = useQuery<FiscalYear[]>({
+    queryKey: ["fiscalYears", companyId],
+    queryFn: () => getFiscalYearsAction(companyId!),
+    enabled: !!companyId,
+    staleTime: 1000 * 60 * 10,
+  });
+
+    const fiscalYears: FiscalYear[] = fiscalYearsQuery.data ?? [];
+
+  const [selectedFY, setSelectedFY] = useState<string>("");
+
+useEffect(() => {
+  if (fiscalYears.length) {
+    setSelectedFY(String(fiscalYears[0].id));
+  } else {
+    setSelectedFY(""); // limpia si no hay
+  }
+}, [fiscalYears]);
+
+const activeFY = useMemo(
+  () => fiscalYears.find(f => f.id === selectedFY) ?? null,
+  [fiscalYears, selectedFY]
+);
+
+// ojo con zona horaria; usa getUTCMonth si tu API manda "Z"
+const startMonth = useMemo(() => {
+  if (!activeFY) return 1; // default enero
+  const d = new Date(activeFY.startDate);
+  return (isNaN(d.getTime()) ? 1 : (d.getUTCMonth() + 1));
+}, [activeFY]);
+
+const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
+  () => makeFiscalCalendar(startMonth),
+  [startMonth]
+);
 
   // isLoading: budgetsLoading
   const { data: budgetsResp } = useQuery<Budget[]>({
@@ -514,6 +572,19 @@ Props) => {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-600">Año Fiscal:</label>
+            <select
+              className="border rounded-lg px-3 py-2 text-sm"
+              value={selectedFY}               // siempre string
+              onChange={(e) => setSelectedFY(e.target.value)}
+              disabled={fiscalYearsQuery.isLoading || !fiscalYears.length}
+            >
+              {fiscalYears.map((fy) => (
+                <option key={fy.id} value={fy.id}>
+                  {fy.name}
+                </option>
+              ))}
+            </select>
             <div className="px-4 py-2 bg-blue-50 rounded-lg">
               <span className="text-sm text-blue-700 font-medium">
                 Total: {formatCurrency(grandTotal)}
@@ -535,7 +606,7 @@ Props) => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-100 z-30">
                   Categoría
                 </th>
-                {MONTHS.map((m) => (
+                {FISCAL_HEADER.map((m) => (
                   <th
                     key={m}
                     className="px-2 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[120px]"
