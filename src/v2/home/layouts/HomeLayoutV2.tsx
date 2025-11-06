@@ -23,7 +23,7 @@ export const HomeLayoutV2 = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderHome username="Diego Castillo" />
+      <HeaderHome/>
       {isLoading && <div className="p-6">Cargando…</div>}
       {isError && (
         <div className="p-6 text-red-600 text-sm">Error al cargar.</div>

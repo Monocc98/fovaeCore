@@ -21,7 +21,7 @@ export const HomeLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderHome username="Diego Castillo" />
+      <HeaderHome/>
       <Outlet />
     </div>
   );

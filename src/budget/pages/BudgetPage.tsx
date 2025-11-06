@@ -260,7 +260,7 @@ Props) => {
       if (b.account !== idAccount) return;
 
       // 🔹 En lugar de descartar por año exacto, lo calculamos sin filtrar
-      const expectedYear = yearForMonth(b.month);
+      // const expectedYear = yearForMonth(b.month);
 
       // Si el registro pertenece a este año fiscal (por rango de meses), lo conservamos
       const monthWithinFY =

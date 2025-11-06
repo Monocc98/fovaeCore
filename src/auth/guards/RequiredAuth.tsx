@@ -8,4 +8,4 @@ export const RequiredAuth = () => {
   if (authStatus !== 'authenticated') return <Navigate to="/auth" replace />;
   return <Outlet />;
   
-}
+}   

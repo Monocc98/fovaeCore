@@ -19,7 +19,7 @@ type AuthState = {
 }
 
 
-export const useAuthStore = create<AuthState>()((set) => ({
+export const useAuthStore = create<AuthState>()((set:any) => ({
   // Implementación del Store
   user: null,
   token: null,
