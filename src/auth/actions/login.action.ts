@@ -1,5 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { AuthResponse } from "@/home/types/authResponse.interface";
+import type { AuthResponse } from "@/types";
 
 export const loginAction = async( email: string, password: string): Promise<AuthResponse> => {
 

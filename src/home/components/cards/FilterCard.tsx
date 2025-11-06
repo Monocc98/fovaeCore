@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, X } from "lucide-react";
-import type { MovementsFilters } from "@/home/types/movements-filters.interface";
+import type { MovementsFilters } from "@/types/movements-filters.interface";
 
 interface Props {
   value: MovementsFilters;

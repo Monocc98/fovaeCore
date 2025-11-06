@@ -5,20 +5,20 @@ import type {
   Category,
   Subcategory,
   Subsubcategory,
-} from "@/home/types/categories.interfaces";
-import type { Budget } from "@/home/types/budget.interface";
+  Budget,
+  FiscalYear
+} from "@/types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { getCategoriesOverloadAction } from "@/home/actions/categories.actions";
+import { getCategoriesOverloadAction } from "@/categories/actions/categories.actions";
 import {
   createBudgetAction,
   deleteBudgetAction,
   getBudgetsAction,
   updateBudgetAction,
   type BudgetsByAccountResponse,
-} from "@/home/actions/budget.actions";
+} from "@/budget/actions/budget.actions";
 import { getFiscalYearsAction } from "@/home/actions/fiscalYear.actions";
-import type { FiscalYear } from "@/home/types/fiscalYear.interface";
 
 export interface MonthlyBudget {
   [month: number]: number; // { 1: 1000, 2: 0, ... }

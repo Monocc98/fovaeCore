@@ -11,10 +11,9 @@ import {
   MovementsTableCard,
 } from "@/home/components/cards";
 import { DashboardConfig } from "@/home/components/DashboardConfig";
-import type { Account } from "@/home/types/account.interface";
-import type { Company } from "@/home/types/comany.interface";
-import type { MovementsFilters } from "@/home/types/movements-filters.interface";
-import { useOverlay } from "@/v2/hooks/useOverlay";
+import type { Account } from "@/types/account.interface";
+import type { Company } from "@/types/comany.interface";
+import type { MovementsFilters } from "@/types/movements-filters.interface";
 import { useQuery } from "@tanstack/react-query";
 import {
   BarChart3,
@@ -26,6 +25,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useOverlay } from "../hooks/useOverlay";
 
 type Level = "groups" | "companies" | "accounts";
 type Tab = {

@@ -14,12 +14,11 @@ import {
   updateCategoryAction,
   updateSubcategoryAction,
   updateSubsubcategoryAction,
-} from "@/home/actions/categories.actions";
+} from "@/categories/actions/categories.actions";
 
 import { DeleteCategoryAlert } from "../components/alerts/DeleteCategoryAlert";
 import { useLocation, useNavigate, useParams } from "react-router";
-import type { CategoriesResponse } from "@/home/types/companiesResponse.interface";
-import type { Category } from "@/home/types/categories.interfaces";
+import type { CategoriesResponse, Category } from "@/types";
 
 type Level = "category" | "subcategory" | "subsubcategory";
 type Scope = "COMPANY" | "ACCOUNT";

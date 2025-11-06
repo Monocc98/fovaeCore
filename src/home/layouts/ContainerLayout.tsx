@@ -1,5 +1,5 @@
 import { Outlet, useOutletContext } from "react-router";
-import type { OutletContext as V2OutletContext } from "@/v2/home/layouts/HomeLayoutV2";
+import type { OutletContext as V2OutletContext } from "@/home/layouts/HomeLayoutV2";
 
 export const ContainerLayout = () => {
   // toma el contexto del padre (HomeLayoutV2)

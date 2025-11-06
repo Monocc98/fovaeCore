@@ -1,14 +1,8 @@
-// import { AccountLayout } from "@/accounts/layouts/AccountLayout";
+
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
-// import { LoginPage } from "@/auth/pages/LoginPage";
-// import { HomeContainer } from "@/home/layouts/HomeContainer";
-// import { HomeLayout } from "@/home/layouts/HomeLayout";
-import { BrowsePage } from "@/v2/home/pages/BrowsePage";
-// import { MovementsPage } from "@/home/pages/MovementsPage";
-import { MovementsUpsertPage } from "@/home/pages/MovementsUpsertPage";
-import { HomeLayoutV2 } from "@/v2/home/layouts/HomeLayoutV2";
+import { BrowsePage, MovementsUpsertPage } from "@/home/pages";
+import { HomeLayoutV2, ContainerLayout } from "@/home/layouts";
 import { createBrowserRouter } from "react-router";
-import { ContainerLayout } from "@/v2/home/layouts/ContainerLayout";
 import { BudgetPage } from "@/budget/pages/BudgetPage";
 import { CategoriesPage } from "@/categories/pages/CategoriesPage";
 import { AccountsPage } from "@/accounts/pages/AccountsPage";

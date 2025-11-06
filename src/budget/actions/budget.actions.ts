@@ -1,5 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { Budget } from "../types/budget.interface";
+import type { Budget } from "../../types";
 
 export interface BudgetsByAccountResponse {
     budgets: Budget[];

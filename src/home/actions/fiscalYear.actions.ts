@@ -1,5 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { FiscalYear } from "../types/fiscalYear.interface";
+import type { FiscalYear } from "../../types";
 
 export const getFiscalYearsAction = async( idCompany: string ):Promise<FiscalYear[]> => {
     const { data } = await fovaeCoreApi.get<any>(`/fiscalYear/company/${idCompany}`);

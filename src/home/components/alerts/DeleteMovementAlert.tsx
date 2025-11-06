@@ -1,5 +1,5 @@
 import { formatCurrency, formatDate, getTransactionColor } from "@/helpers";
-import type { Movement } from "@/home/types/movement.interface";
+import type { Movement } from "@/types";
 import { Trash2 } from "lucide-react";
 
 interface Props {

@@ -8,7 +8,7 @@ import {
 } from "@/helpers";
 import { deleteMovementAction } from "@/home/actions/movements.actions";
 // import { useHomeStore } from "@/home/hooks/useHomeStore";
-import type { Movement } from "@/home/types/movement.interface";
+import type { Movement } from "@/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
 import { useDeferredValue, useMemo, useState } from "react";
@@ -19,7 +19,7 @@ import {
   useSearchParams,
 } from "react-router";
 import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
-import type { MovementsFilters } from "@/home/types/movements-filters.interface";
+import type { MovementsFilters } from "@/types/movements-filters.interface";
 
 interface Props {
   movements?: Movement[];

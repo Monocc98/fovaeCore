@@ -7,11 +7,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useHomeStore } from "../hooks/useHomeStore";
 // import { CustomBreadcrumb } from "@/components/custom/CustomBreadcrumb";
 
 export const DashboardConfig = () => {
-  const { mode } = useHomeStore();
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
@@ -46,7 +44,6 @@ export const DashboardConfig = () => {
           </div>
         </div>
         {/* Family Switch */}
-        {mode !== "account" && (
           <div className="flex items-center gap-2">
             <Label
               htmlFor="family-mode"
@@ -56,7 +53,6 @@ export const DashboardConfig = () => {
             </Label>
             <Switch id="family-mode" />
           </div>
-        )}
       </div>
     </div>
   );

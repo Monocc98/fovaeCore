@@ -1,5 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { Movement } from "../types/movement.interface";
+import type { Movement } from "../../types";
 
 export interface MovementsByAccountResponse {
     movements: Movement[];

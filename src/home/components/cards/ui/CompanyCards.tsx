@@ -1,5 +1,5 @@
-import type { Account } from "@/home/types/account.interface";
-import type { Company } from "@/home/types/comany.interface";
+import type { Account } from "@/types/account.interface";
+import type { Company } from "@/types/comany.interface";
 import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 
 interface Props {

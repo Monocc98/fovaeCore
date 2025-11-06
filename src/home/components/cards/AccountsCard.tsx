@@ -1,6 +1,6 @@
-import type { Company } from "@/home/types/comany.interface";
+import type { Company } from "@/types/comany.interface";
 import { CompanyCards } from "./ui/CompanyCards";
-import type { Account } from "@/home/types/account.interface";
+import type { Account } from "@/types/account.interface";
 
 type Content = Company | Account;
 

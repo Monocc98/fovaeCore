@@ -1,6 +1,5 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { CategoriesResponse } from "../types/companiesResponse.interface";
-import type { Category, Subcategory, Subsubcategory } from "../types/categories.interfaces";
+import type { CategoriesResponse, Category, Subcategory, Subsubcategory } from "../../types";
 
 export const getCategoriesOverloadAction = async(idCompany: string):Promise<CategoriesResponse> => {
     const { data } = await fovaeCoreApi.get<CategoriesResponse>(`/categories/${idCompany}`);

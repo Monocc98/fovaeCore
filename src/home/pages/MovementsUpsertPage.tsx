@@ -8,10 +8,9 @@ import {
 } from "../actions/movements.actions";
 import { useEffect, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { getCategoriesOverloadAction } from "../actions/categories.actions";
+import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
 import { formatDate, getStatusBadge, getTransactionColor } from "@/helpers";
-import type { CategoriesResponse } from "../types/companiesResponse.interface";
-import type { Category } from "../types/categories.interfaces";
+import type { CategoriesResponse, Category } from "../../types";
 
 type FormValues = {
   id?: string;
