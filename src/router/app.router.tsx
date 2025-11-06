@@ -13,65 +13,71 @@ import { BudgetPage } from "@/budget/pages/BudgetPage";
 import { CategoriesPage } from "@/categories/pages/CategoriesPage";
 import { AccountsPage } from "@/accounts/pages/AccountsPage";
 import { LoginPage } from "@/auth/pages/LoginPage";
+import { RedirectIfAuth } from "@/auth/guards/RedirectIfAuth";
+import { RequiredAuth } from "@/auth/guards/RequiredAuth";
 
 export const appRouter = createBrowserRouter([
-  // LEGACY PATH
 
   {
-    path: "/auth",
-    element: <AuthLayout />,
+    path: '/auth',
+    element: <RedirectIfAuth />,
     children: [
       {
-        index: true,
-        element: <LoginPage />,
+        element: <AuthLayout />,
+        children: [{ index: true, element: <LoginPage /> }],
       },
     ],
   },
 
   // V2 PROTOTIPO
   {
-    path: "/",
-    element: <HomeLayoutV2 />,
-    children: [
-      //Nivel 1: grupos
-      { index: true, element: <BrowsePage /> },
-
-      // Nivel 2: empresas de un grupo
-      {
-        path: "group/:groupId",
-        element: <ContainerLayout />,
+        element: <RequiredAuth  />,
         children: [
-          { index: true, element: <BrowsePage /> },
           {
-            path: "accounts/:companyId",
-            element: <AccountsPage />,
+        path: "/",
+        element: <HomeLayoutV2 />,
+        children: [
+          //Nivel 1: grupos
+          { index: true, element: <BrowsePage /> },
+
+          // Nivel 2: empresas de un grupo
+          {
+            path: "group/:groupId",
+            element: <ContainerLayout />,
+            children: [
+              { index: true, element: <BrowsePage /> },
+              {
+                path: "accounts/:companyId",
+                element: <AccountsPage />,
+              },
+            ],
+          },
+          {
+            path: "company/:companyId",
+            element: <ContainerLayout />,
+            children: [
+              { index: true, element: <BrowsePage /> },
+              {
+                path: "movement/:idMovement/edit",
+                element: <MovementsUpsertPage />,
+              },
+              {
+                path: "movement/new/:idAccount",
+                element: <MovementsUpsertPage />,
+              },
+              {
+                path: "categories/:idAccount",
+                element: <CategoriesPage />,
+              },
+              {
+                path: "budget/:idAccount",
+                element: <BudgetPage />,
+              },
+            ],
           },
         ],
-      },
-
-      {
-        path: "company/:companyId",
-        element: <ContainerLayout />,
-        children: [
-          { index: true, element: <BrowsePage /> },
-          {
-            path: "movement/:idMovement/edit",
-            element: <MovementsUpsertPage />,
-          },
-          {
-            path: "movement/new/:idAccount",
-            element: <MovementsUpsertPage />,
-          },
-          {
-            path: "categories/:idAccount",
-            element: <CategoriesPage />,
-          },
-          {
-            path: "budget/:idAccount",
-            element: <BudgetPage />,
-          },
-        ],
-      },
-    ],
+        }
+      ]
+    
   },
 ]);

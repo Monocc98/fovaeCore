@@ -8,7 +8,7 @@ export const checkAuthAction = async ():Promise<AuthResponse> => {
     if ( !token ) throw new Error('No token found');
 
     try {
-        const { data } = await fovaeCoreApi.get<AuthResponse>('/auth/renew');
+        const { data } = await fovaeCoreApi.post<AuthResponse>('/auth/renew');
 
         localStorage.setItem('token', data.token)
 
