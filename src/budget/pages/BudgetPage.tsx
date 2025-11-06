@@ -61,10 +61,7 @@ const makeFiscalCalendar = (startMonth: number) => {
   const startIdx = (startMonth - 1 + 12) % 12;
 
   // cabecera rotada: p.ej. startMonth=8 -> ["Agosto","Septiembre",...,"Julio"]
-  const header = [
-    ...MONTHS.slice(startIdx),
-    ...MONTHS.slice(0, startIdx),
-  ];
+  const header = [...MONTHS.slice(startIdx), ...MONTHS.slice(0, startIdx)];
 
   // convierte posición fiscal (1–12) -> mes calendario (1–12)
   const fiscalPosToCalendar = (pos: number) =>
@@ -200,34 +197,44 @@ Props) => {
     staleTime: 1000 * 60 * 10,
   });
 
-    const fiscalYears: FiscalYear[] = fiscalYearsQuery.data ?? [];
+  const fiscalYears: FiscalYear[] = fiscalYearsQuery.data ?? [];
 
   const [selectedFY, setSelectedFY] = useState<string>("");
 
-useEffect(() => {
-  if (fiscalYears.length) {
-    setSelectedFY(String(fiscalYears[0].id));
-  } else {
-    setSelectedFY(""); // limpia si no hay
-  }
-}, [fiscalYears]);
+  useEffect(() => {
+    if (fiscalYears.length) {
+      setSelectedFY(String(fiscalYears[0].id));
+    } else {
+      setSelectedFY(""); // limpia si no hay
+    }
+  }, [fiscalYears]);
 
-const activeFY = useMemo(
-  () => fiscalYears.find(f => f.id === selectedFY) ?? null,
-  [fiscalYears, selectedFY]
-);
+  const activeFY = useMemo(
+    () => fiscalYears.find((f) => f.id === selectedFY) ?? null,
+    [fiscalYears, selectedFY]
+  );
 
-// ojo con zona horaria; usa getUTCMonth si tu API manda "Z"
-const startMonth = useMemo(() => {
-  if (!activeFY) return 1; // default enero
-  const d = new Date(activeFY.startDate);
-  return (isNaN(d.getTime()) ? 1 : (d.getUTCMonth() + 1));
-}, [activeFY]);
+  // ojo con zona horaria; usa getUTCMonth si tu API manda "Z"
+  const startMonth = useMemo(() => {
+    if (!activeFY) return 1; // default enero
+    const d = new Date(activeFY.startDate);
+    return isNaN(d.getTime()) ? 1 : d.getUTCMonth() + 1;
+  }, [activeFY]);
 
-const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
-  () => makeFiscalCalendar(startMonth),
-  [startMonth]
-);
+  const startYear = useMemo(() => {
+    const d = activeFY ? new Date(activeFY.startDate) : null;
+    return d && !isNaN(d.getTime())
+      ? d.getUTCFullYear()
+      : new Date().getUTCFullYear();
+  }, [activeFY]);
+
+  const yearForMonth = (calMonth: number) =>
+    calMonth >= startMonth ? startYear : startYear + 1;
+
+  const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
+    () => makeFiscalCalendar(startMonth),
+    [startMonth]
+  );
 
   // isLoading: budgetsLoading
   const { data: budgetsResp } = useQuery<Budget[]>({
@@ -248,11 +255,21 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
 
   const budgetsByLeaf = useMemo<Record<string, MonthlyBudget>>(() => {
     const map: Record<string, MonthlyBudget> = {};
+
     (budgetsResp ?? []).forEach((b) => {
-      if (b.year !== fiscalYear) return;
       if (b.account !== idAccount) return;
 
-      // soporta ._id o .id y, si llegara a venir a nivel subcategory, también
+      // 🔹 En lugar de descartar por año exacto, lo calculamos sin filtrar
+      const expectedYear = yearForMonth(b.month);
+
+      // Si el registro pertenece a este año fiscal (por rango de meses), lo conservamos
+      const monthWithinFY =
+        (startMonth <= 12 && b.month >= startMonth) || // meses del mismo año fiscal
+        startMonth > b.month; // meses del siguiente año fiscal
+
+      if (!monthWithinFY) return; // fuera del rango de este FY
+
+      // continuar como siempre
       const leafId =
         (b as any).subsubcategory?._id ??
         (b as any).subsubcategory?.id ??
@@ -264,8 +281,9 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
       map[leafId] ||= {};
       map[leafId][b.month] = (map[leafId][b.month] || 0) + b.amount;
     });
+
     return map;
-  }, [budgetsResp, idAccount, fiscalYear]);
+  }, [budgetsResp, idAccount, startMonth]);
 
   // 2) Construir árbol SIN budgets (budgetsByLeaf = {})
   const tree = useMemo(() => {
@@ -326,11 +344,13 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
 
   const upsertBudget = useMutation({
     mutationFn: async ({ leafId, month, amount }: UpsertVars) => {
+      const targetYear = yearForMonth(month);
+
       const existing: Budget | undefined = (budgetsResp ?? []).find(
         (b) =>
           getId((b as any).subsubcategory) === leafId &&
           b.month === month &&
-          b.year === fiscalYear &&
+          b.year === targetYear &&
           b.account === idAccount
       );
 
@@ -344,18 +364,16 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
         return updateBudgetAction(existing.id, {
           ...existing,
           amount,
+          year: targetYear,
           subsubcategory: getId((existing as any).subsubcategory), // <— SOLO ID
         } as any);
       }
 
-      if (amount === 0) {
-        // no-op
-        return null as any;
-      }
+      if (amount === 0) return null as any;
 
       // -------- CREATE: mandar SOLO el id --------
       return createBudgetAction({
-        year: fiscalYear!,
+        year: targetYear,
         month,
         account: idAccount!,
         amount,
@@ -364,6 +382,7 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
     },
 
     onMutate: async ({ leafId, month, amount }: UpsertVars) => {
+      const targetYear = yearForMonth(month);
       await queryClient.cancelQueries({ queryKey: ["v2:budgets", idAccount] });
       const prev =
         queryClient.getQueryData<Budget[]>(["v2:budgets", idAccount]) ?? [];
@@ -372,14 +391,14 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
         (b) =>
           getId((b as any).subsubcategory) === leafId &&
           b.month === month &&
-          b.year === fiscalYear &&
+          b.year === targetYear &&
           b.account === idAccount
       );
 
       let next: Budget[];
       if (i >= 0) {
         next = [...prev];
-        next[i] = { ...prev[i], amount };
+        next[i] = { ...prev[i], amount, year: targetYear };
       } else {
         // Para el optimista puedes dejar el objeto (no afecta al server porque esto no se envía)
         const subsub = subsubIndex.get(leafId);
@@ -387,7 +406,7 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
           ...prev,
           {
             id: `temp-${Date.now()}`,
-            year: fiscalYear!,
+            year: targetYear,
             month,
             account: idAccount!,
             amount,
@@ -405,8 +424,27 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
         queryClient.setQueryData(["v2:budgets", idAccount], ctx.prev);
     },
 
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["v2:budgets", idAccount] });
+    onSuccess: (newData) => {
+      if (!newData) return;
+
+      queryClient.setQueryData<Budget[]>(
+        ["v2:budgets", idAccount],
+        (old = []) => {
+          if ((newData as any).deleted) {
+            // si fue eliminación
+            return old.filter((b) => b.id !== (newData as any).id);
+          }
+
+          const idx = old.findIndex((b) => b.id === (newData as any).id);
+          if (idx >= 0) {
+            const copy = [...old];
+            copy[idx] = newData as Budget;
+            return copy;
+          } else {
+            return [...old, newData as Budget];
+          }
+        }
+      );
     },
   });
 
@@ -486,8 +524,9 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
             </div>
           </td>
 
-          {MONTHS.map((_, monthIndex) => {
-            const month = monthIndex + 1;
+          {FISCAL_HEADER.map((_, i) => {
+            const fiscalPos = i + 1;
+            const month = fiscalPosToCalendar(fiscalPos);
             const value = isLeaf ? node.budgets?.[month] || 0 : 0;
             const isEditing =
               editingCell?.nodeKey === rowKey && editingCell?.month === month;
@@ -565,7 +604,7 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
         <div className="flex items-center justify-between p-6 border-b">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              Presupuesto {fiscalYear}
+              Presupuesto {activeFY?.name ?? fiscalYear}
             </h2>
             <p className="text-gray-600 mt-1">
               Administra el presupuesto mensual por categoría — {activeGroup}
@@ -575,7 +614,7 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
             <label className="text-sm text-gray-600">Año Fiscal:</label>
             <select
               className="border rounded-lg px-3 py-2 text-sm"
-              value={selectedFY}               // siempre string
+              value={selectedFY} // siempre string
               onChange={(e) => setSelectedFY(e.target.value)}
               disabled={fiscalYearsQuery.isLoading || !fiscalYears.length}
             >
@@ -625,11 +664,17 @@ const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
                 <td className="px-4 py-4 text-left sticky left-0 bg-gray-100 z-30">
                   TOTAL GENERAL
                 </td>
-                {MONTHS.map((_, i) => (
-                  <td key={i} className="px-2 py-4 text-center text-gray-900">
-                    {formatCurrency(getMonthTotal(tree, i + 1))}
-                  </td>
-                ))}
+                {FISCAL_HEADER.map((_, i) => {
+                  const calMonth = fiscalPosToCalendar(i + 1);
+                  return (
+                    <td
+                      key={calMonth}
+                      className="px-2 py-4 text-center text-gray-900"
+                    >
+                      {formatCurrency(getMonthTotal(tree, calMonth))}
+                    </td>
+                  );
+                })}
                 <td className="px-4 py-4 text-right sticky right-0 bg-gray-100 z-30">
                   <span className="text-lg">{formatCurrency(grandTotal)}</span>
                 </td>

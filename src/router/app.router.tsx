@@ -12,6 +12,7 @@ import { ContainerLayout } from "@/v2/home/layouts/ContainerLayout";
 import { BudgetPage } from "@/budget/pages/BudgetPage";
 import { CategoriesPage } from "@/categories/pages/CategoriesPage";
 import { AccountsPage } from "@/accounts/pages/AccountsPage";
+import { LoginPage } from "@/auth/pages/LoginPage";
 
 export const appRouter = createBrowserRouter([
   // LEGACY PATH
@@ -20,10 +21,10 @@ export const appRouter = createBrowserRouter([
     path: "/auth",
     element: <AuthLayout />,
     children: [
-      // {
-      //   index: true,
-      //   element: <LoginPage />,
-      // },
+      {
+        index: true,
+        element: <LoginPage />,
+      },
     ],
   },
 
@@ -71,29 +72,6 @@ export const appRouter = createBrowserRouter([
           },
         ],
       },
-
-      // Nivel 3: contexto de cuenta (subárbol)c
-      // {
-      //   path: "company/:companyId",
-      //   element: <AccountLayout />,
-      //   children: [
-      //     { index: true, element: <MovementsPage /> },
-
-      //     // Reusando tus mismas páginas
-      //     // { path: "movements", element: <MovementsPage /> },
-      //     { path: "categories", element: <CategoriesPage /> },
-      //     { path: "budget", element: <BudgetPage /> },
-
-      //     // CRUD movimientos bajo el contexto de cuenta
-      //     { path: "movement/new", element: <MovementsUpsertPage /> },
-      //     {
-      //       path: "movement/:movementId/edit",
-      //       element: <MovementsUpsertPage />,
-      //     },
-      //   ],
-      // },
-
-      // { path: "*", element: <Navigate to="/v2" replace /> },
     ],
   },
 ]);
