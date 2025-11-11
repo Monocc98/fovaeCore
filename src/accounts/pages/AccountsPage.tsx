@@ -1,9 +1,5 @@
 import React, { useState } from "react";
-import type {
-  Account,
-  AccountsResponse,
-  AccountType,
-} from "@/types";
+import type { Account, AccountsResponse, AccountType } from "@/types";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -119,9 +115,7 @@ export const AccountsPage = () => {
 
   // --- Loading / Error desde React Query ---
   if (accountsQuery.isLoading) {
-    return (
-      <CustomFullscreenLoading />
-    );
+    return <CustomFullscreenLoading />;
   }
 
   if (accountsQuery.isError) {
@@ -152,7 +146,13 @@ export const AccountsPage = () => {
       />
 
       {isModalOpen && (
-        <AccountsModal  />
+        <AccountsModal
+          editing={!!editing}
+          formData={formData}
+          onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))}
+          onClose={closeModal}
+          onSubmit={onSubmit}
+        />
       )}
     </div>
   );
