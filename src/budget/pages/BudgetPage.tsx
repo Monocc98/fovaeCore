@@ -1,687 +1,121 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Edit2, Save, X } from "lucide-react";
+import React, { useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router";
 import { formatCurrency } from "@/helpers";
-import type {
-  Category,
-  Subcategory,
-  Subsubcategory,
-  Budget,
-  FiscalYear
-} from "@/types";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocation, useNavigate, useParams } from "react-router";
-import { getCategoriesOverloadAction } from "@/categories/actions/categories.actions";
+import { BudgetHeader } from "../components/BudgetHeader";
+import { BudgetTable } from "../components/BudgetTable";
+import { useCategories } from "../hooks/useCategories";
+import { useFiscalYears } from "../hooks/useFiscalYears";
+import { useBudgets } from "../hooks/useBudgets";
+import { useBudgetEditing } from "../hooks/useBudgetEditing";
+import { useExpandedTree } from "../hooks/useExpandedTree";
 import {
-  createBudgetAction,
-  deleteBudgetAction,
-  getBudgetsAction,
-  updateBudgetAction,
-  type BudgetsByAccountResponse,
-} from "@/budget/actions/budget.actions";
-import { getFiscalYearsAction } from "@/home/actions/fiscalYear.actions";
+  makeFiscalCalendar,
+  computeStartYear,
+  yearForCalendarMonth,
+} from "../helpers/fiscalCalendar.helper";
+import { buildHierarchyFromNested } from "../helpers/buildHierarchy.helper";
+import { calculateTotals } from "../helpers/totals.helper";
 
-export interface MonthlyBudget {
-  [month: number]: number; // { 1: 1000, 2: 0, ... }
-}
-
-export type NodeBase =
-  | ({ kind: "CATEGORY" } & Category)
-  | ({ kind: "SUBCATEGORY" } & Subcategory)
-  | ({ kind: "SUBSUBCATEGORY" } & Subsubcategory);
-
-export type CategoryWithBudgets = NodeBase & {
-  budgets: MonthlyBudget;
-  children?: CategoryWithBudgets[];
-  total?: number;
-};
-
-type UpsertVars = { leafId: string; month: number; amount: number };
-
-/**
- * =============================
- *  Utilidades
- * =============================
- */
-const MONTHS = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
-const makeFiscalCalendar = (startMonth: number) => {
-  const startIdx = (startMonth - 1 + 12) % 12;
-
-  // cabecera rotada: p.ej. startMonth=8 -> ["Agosto","Septiembre",...,"Julio"]
-  const header = [...MONTHS.slice(startIdx), ...MONTHS.slice(0, startIdx)];
-
-  // convierte posición fiscal (1–12) -> mes calendario (1–12)
-  const fiscalPosToCalendar = (pos: number) =>
-    ((startIdx + (pos - 1)) % 12) + 1;
-
-  // convierte mes calendario (1–12) -> posición fiscal (1–12)
-  const calendarToFiscalPos = (cal: number) =>
-    ((cal - startMonth + 12) % 12) + 1;
-
-  return { header, fiscalPosToCalendar, calendarToFiscalPos };
-};
-
-/**
- * Calcula totales (anual) bottom-up y retorna el total del arreglo
- */
-function calculateTotals(nodes: CategoryWithBudgets[]): number {
-  let total = 0;
-  nodes.forEach((n) => {
-    if (n.children && n.children.length) {
-      n.total = calculateTotals(n.children);
-    } else {
-      // hoja: sumar meses
-      n.total = Object.values(n.budgets).reduce((acc, v) => acc + v, 0);
-    }
-    total += n.total || 0;
-  });
-  return total;
-}
-
-/**
- * Suma un mes específico recorriendo el árbol (solo hojas tienen budgets)
- */
-// function getMonthTotal(nodes: CategoryWithBudgets[], month: number): number {
-//   let sum = 0;
-//   for (const n of nodes) {
-//     if (n.children && n.children.length)
-//       sum += getMonthTotal(n.children, month);
-//     else sum += n.budgets[month] || 0;
-//   }
-//   return sum;
-// }
-
-/* ============================
- * Builder ANIDADO (único a usar)
- * ============================ */
-function buildHierarchyFromNested(
-  categories: Category[] = [],
-  budgetsByLeaf: Record<string, MonthlyBudget> = {}
-): CategoryWithBudgets[] {
-  const toLeaf = (leaf: Subsubcategory): CategoryWithBudgets => ({
-    kind: "SUBSUBCATEGORY",
-    ...leaf,
-    budgets: budgetsByLeaf[leaf._id] || {},
-    children: [],
-    total: 0,
-  });
-
-  const toSub = (sub: Subcategory): CategoryWithBudgets => {
-    const children = (sub.subsubcategories ?? []).map(toLeaf);
-    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0 };
-  };
-
-  const toCat = (cat: Category): CategoryWithBudgets => {
-    const children = (cat.subcategories ?? []).map(toSub);
-    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0 };
-  };
-
-  return categories.map(toCat);
-}
-
-/**
- * =============================
- *  Componente principal
- * =============================
- */
-interface Props {
-  activeGroup?: string;
-  fiscalYear?: number;
-  budgets?: Budget[]; // si no tienes server aún, puedes pasar []
-  accountId?: string;
-  onBack?: () => void;
-}
-
-const levelColors = [
-  "bg-blue-50 border-blue-200",
-  "bg-green-50 border-green-200",
-  "bg-yellow-50 border-yellow-200",
-];
-
-export const BudgetPage = ({
-  activeGroup = "Grupo Demo",
-  fiscalYear = 2025,
-}: //budgets: incomingBudgets = [],
-Props) => {
-  // Estado fuente de verdad de budgets (como si fuera tu DB)
-  //const [budgets, setBudgets] = useState<Budget[]>(incomingBudgets);
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
-  const [editingCell, setEditingCell] = useState<{
-    nodeKey: string;
-    month: number;
-  } | null>(null);
-  const [editValue, setEditValue] = useState<string>("");
-
-  const queryClient = useQueryClient();
-
+export const BudgetPage: React.FC = () => {
   const { companyId, idAccount } = useParams<{
     companyId: string;
     idAccount: string;
   }>();
-
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = (location.state as any)?.backTo as string | undefined;
 
-  // 1) Traer categorías anidadas por empresa
+  // Datos
+  const { categories } = useCategories(companyId);
   const {
-    data: catsResp,
-    // isLoading: catsLoading,
-    // isError: catsError,
-    // error,
-  } = useQuery({
-    queryKey: ["v2:company-categories", companyId],
-    queryFn: () => getCategoriesOverloadAction(companyId!),
-    enabled: !!companyId,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
+    fiscalYears,
+    selectedFY,
+    setSelectedFY,
+    activeFY,
+    isLoading: fyLoading,
+  } = useFiscalYears(companyId);
 
-  const fiscalYearsQuery = useQuery<FiscalYear[]>({
-    queryKey: ["fiscalYears", companyId],
-    queryFn: () => getFiscalYearsAction(companyId!),
-    enabled: !!companyId,
-    staleTime: 1000 * 60 * 10,
-  });
-
-  const fiscalYears: FiscalYear[] = fiscalYearsQuery.data ?? [];
-
-  const [selectedFY, setSelectedFY] = useState<string>("");
-
-  useEffect(() => {
-    if (fiscalYears.length) {
-      setSelectedFY(String(fiscalYears[0].id));
-    } else {
-      setSelectedFY(""); // limpia si no hay
-    }
-  }, [fiscalYears]);
-
-  const activeFY = useMemo(
-    () => fiscalYears.find((f) => f.id === selectedFY) ?? null,
-    [fiscalYears, selectedFY]
-  );
-
-  // ojo con zona horaria; usa getUTCMonth si tu API manda "Z"
   const startMonth = useMemo(() => {
-    if (!activeFY) return 1; // default enero
+    if (!activeFY) return 1;
     const d = new Date(activeFY.startDate);
     return isNaN(d.getTime()) ? 1 : d.getUTCMonth() + 1;
   }, [activeFY]);
 
-  const startYear = useMemo(() => {
-    const d = activeFY ? new Date(activeFY.startDate) : null;
-    return d && !isNaN(d.getTime())
-      ? d.getUTCFullYear()
-      : new Date().getUTCFullYear();
-  }, [activeFY]);
-
+  const startYear = useMemo(
+    () => computeStartYear(activeFY?.startDate),
+    [activeFY]
+  );
   const yearForMonth = (calMonth: number) =>
-    calMonth >= startMonth ? startYear : startYear + 1;
-
+    yearForCalendarMonth(calMonth, startMonth, startYear);
   const { header: FISCAL_HEADER, fiscalPosToCalendar } = useMemo(
     () => makeFiscalCalendar(startMonth),
     [startMonth]
   );
 
-  // isLoading: budgetsLoading
-  const { data: budgetsResp } = useQuery<Budget[]>({
-    queryKey: ["v2:budgets", idAccount],
-    queryFn: async () => {
-      const resp: BudgetsByAccountResponse = await getBudgetsAction(idAccount!);
-      return resp.budgets; // <- devolvemos el array
-    },
-    enabled: !!idAccount,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
-  });
-
-  const categories = useMemo(
-    () => catsResp?.company?.categories ?? [],
-    [catsResp]
+  const { budgetsByLeaf, upsertBudget } = useBudgets(
+    idAccount,
+    startMonth,
+    yearForMonth,
+    categories
   );
-
-  const budgetsByLeaf = useMemo<Record<string, MonthlyBudget>>(() => {
-    const map: Record<string, MonthlyBudget> = {};
-
-    (budgetsResp ?? []).forEach((b) => {
-      if (b.account !== idAccount) return;
-
-      // 🔹 En lugar de descartar por año exacto, lo calculamos sin filtrar
-      // const expectedYear = yearForMonth(b.month);
-
-      // Si el registro pertenece a este año fiscal (por rango de meses), lo conservamos
-      const monthWithinFY =
-        (startMonth <= 12 && b.month >= startMonth) || // meses del mismo año fiscal
-        startMonth > b.month; // meses del siguiente año fiscal
-
-      if (!monthWithinFY) return; // fuera del rango de este FY
-
-      // continuar como siempre
-      const leafId =
-        (b as any).subsubcategory?._id ??
-        (b as any).subsubcategory?.id ??
-        (b as any).subcategory?._id ??
-        (b as any).subcategory?.id;
-
-      if (!leafId) return;
-
-      map[leafId] ||= {};
-      map[leafId][b.month] = (map[leafId][b.month] || 0) + b.amount;
-    });
-
-    return map;
-  }, [budgetsResp, idAccount, startMonth]);
-
-  // 2) Construir árbol SIN budgets (budgetsByLeaf = {})
   const tree = useMemo(() => {
     const root = buildHierarchyFromNested(categories, budgetsByLeaf);
     calculateTotals(root);
     return root;
   }, [categories, budgetsByLeaf]);
+  const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]);
 
-  const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]); // recalcula totales (defensivo)
+  // UI state
+  const { expanded, toggle, isExpanded } = useExpandedTree();
+  const { editingCell, editValue, setEditValue, startEditing, cancelEditing } =
+    useBudgetEditing();
 
-  const toggle = (kind: NodeBase["kind"], id: string) => {
-    const key = `${kind}:${id}`;
-    const next = new Set(expanded);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    setExpanded(next);
-  };
-
-  const getMonthTotal = (
-    nodes: CategoryWithBudgets[],
-    month: number
-  ): number => {
-    let sum = 0;
-    for (const n of nodes) {
-      if (n.children && n.children.length)
-        sum += getMonthTotal(n.children, month);
-      else sum += n.budgets[month] || 0; // siempre 0 por ahora
-    }
-    return sum;
-  };
-
-  const startEditing = (
-    node: CategoryWithBudgets,
-    month: number,
-    current: number
-  ) => {
-    const nodeKey = `${node.kind}:${node._id}`;
-    setEditingCell({ nodeKey, month });
-    setEditValue(String(current ?? 0));
-  };
-
-  const cancelEditing = () => {
-    setEditingCell(null);
-    setEditValue("");
-  };
-
-  const subsubIndex = useMemo(() => {
-    const map = new Map<string, Subsubcategory>();
-    categories.forEach((c) =>
-      c.subcategories?.forEach((s) =>
-        s.subsubcategories?.forEach((ss) => map.set(ss._id, ss))
-      )
-    );
-    return map;
-  }, [categories]);
-
-  const getId = (x: any) => String(x?.id ?? x?._id ?? x);
-
-  const upsertBudget = useMutation({
-    mutationFn: async ({ leafId, month, amount }: UpsertVars) => {
-      const targetYear = yearForMonth(month);
-
-      const existing: Budget | undefined = (budgetsResp ?? []).find(
-        (b) =>
-          getId((b as any).subsubcategory) === leafId &&
-          b.month === month &&
-          b.year === targetYear &&
-          b.account === idAccount
-      );
-
-      if (existing) {
-        // ---- Si mandan 0 ----
-        if (amount === 0) {
-          await deleteBudgetAction(existing.id);
-          return null as any;
-        }
-        // -------- UPDATE: mandar SOLO el id --------
-        return updateBudgetAction(existing.id, {
-          ...existing,
-          amount,
-          year: targetYear,
-          subsubcategory: getId((existing as any).subsubcategory), // <— SOLO ID
-        } as any);
-      }
-
-      if (amount === 0) return null as any;
-
-      // -------- CREATE: mandar SOLO el id --------
-      return createBudgetAction({
-        year: targetYear,
-        month,
-        account: idAccount!,
-        amount,
-        subsubcategory: leafId, // <— SOLO ID
-      } as any);
-    },
-
-    onMutate: async ({ leafId, month, amount }: UpsertVars) => {
-      const targetYear = yearForMonth(month);
-      await queryClient.cancelQueries({ queryKey: ["v2:budgets", idAccount] });
-      const prev =
-        queryClient.getQueryData<Budget[]>(["v2:budgets", idAccount]) ?? [];
-
-      const i = prev.findIndex(
-        (b) =>
-          getId((b as any).subsubcategory) === leafId &&
-          b.month === month &&
-          b.year === targetYear &&
-          b.account === idAccount
-      );
-
-      let next: Budget[];
-      if (i >= 0) {
-        next = [...prev];
-        next[i] = { ...prev[i], amount, year: targetYear };
-      } else {
-        // Para el optimista puedes dejar el objeto (no afecta al server porque esto no se envía)
-        const subsub = subsubIndex.get(leafId);
-        next = [
-          ...prev,
-          {
-            id: `temp-${Date.now()}`,
-            year: targetYear,
-            month,
-            account: idAccount!,
-            amount,
-            subsubcategory: subsub as any,
-          },
-        ];
-      }
-
-      queryClient.setQueryData(["v2:budgets", idAccount], next);
-      return { prev };
-    },
-
-    onError: (_err, _vars, ctx) => {
-      if (ctx?.prev)
-        queryClient.setQueryData(["v2:budgets", idAccount], ctx.prev);
-    },
-
-    onSuccess: (newData) => {
-      if (!newData) return;
-
-      queryClient.setQueryData<Budget[]>(
-        ["v2:budgets", idAccount],
-        (old = []) => {
-          if ((newData as any).deleted) {
-            // si fue eliminación
-            return old.filter((b) => b.id !== (newData as any).id);
-          }
-
-          const idx = old.findIndex((b) => b.id === (newData as any).id);
-          if (idx >= 0) {
-            const copy = [...old];
-            copy[idx] = newData as Budget;
-            return copy;
-          } else {
-            return [...old, newData as Budget];
-          }
-        }
-      );
-    },
-  });
-
-  // ---- Tu handler de guardar ----
-  const saveBudget = () => {
+  const isEditingCell = (rowKey: string, month: number) =>
+    editingCell?.nodeKey === rowKey && editingCell?.month === month;
+  const startEdit = (rowKey: string, month: number, current: number) =>
+    startEditing(rowKey, month, current);
+  const saveEdit = () => {
     if (!editingCell) return;
     const amount = parseFloat(editValue) || 0;
     const [kind, leafId] = editingCell.nodeKey.split(":");
     if (kind !== "SUBSUBCATEGORY") return;
-
     upsertBudget.mutate({ leafId, month: editingCell.month, amount });
     cancelEditing();
   };
 
   const handleBack = () => {
-    if (backTo) {
-      navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
-    } else if (companyId) {
-      // fallback razonable a la vista de la empresa con la cuenta activa marcada
+    if (backTo) navigate(backTo, { replace: true });
+    else if (companyId)
       navigate(`/company/${companyId}?a=${idAccount}`, { replace: true });
-    } else {
-      navigate(-1); // último recurso
-    }
-  };
-
-  const renderRow = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
-    const hasChildren = !!(node.children && node.children.length);
-    const isLeaf = node.kind === "SUBSUBCATEGORY";
-    const paddingLeft = level * 32; // px
-    const rowKey = `${node.kind}:${node._id}`;
-    const isExpanded = expanded.has(rowKey);
-
-    // const monthlyTotals = MONTHS.map((_, i) => node.budgets?.[i + 1] || 0);
-
-    return (
-      <React.Fragment key={rowKey}>
-        <tr
-          className={`border-b ${
-            levelColors[level % 3]
-          } transition-all hover:bg-opacity-75`}
-        >
-          <td
-            className="px-4 py-3 sticky left-0 bg-inherit z-10"
-            style={{ paddingLeft: paddingLeft + 16 }}
-          >
-            <div className="flex items-center gap-2">
-              {hasChildren ? (
-                <button
-                  onClick={() => toggle(node.kind, node._id)}
-                  className="p-1 hover:bg-white rounded"
-                >
-                  {isExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-gray-600" />
-                  ) : (
-                    <ChevronRight className="w-4 h-4 text-gray-600" />
-                  )}
-                </button>
-              ) : (
-                <div className="w-6" />
-              )}
-              <span
-                className={`font-medium ${
-                  level === 0
-                    ? "text-lg"
-                    : level === 1
-                    ? "text-base"
-                    : "text-sm"
-                } text-gray-900`}
-              >
-                {node.name}
-              </span>
-              {isLeaf ? (
-                <span className="px-2 py-0.5 text-xs bg-white rounded-full text-gray-600">
-                  Detalle
-                </span>
-              ) : null}
-            </div>
-          </td>
-
-          {FISCAL_HEADER.map((_, i) => {
-            const fiscalPos = i + 1;
-            const month = fiscalPosToCalendar(fiscalPos);
-            const value = isLeaf ? node.budgets?.[month] || 0 : 0;
-            const isEditing =
-              editingCell?.nodeKey === rowKey && editingCell?.month === month;
-
-            return (
-              <td key={month} className="px-2 py-2 text-center">
-                {isLeaf ? (
-                  isEditing ? (
-                    <div className="flex items-center justify-center gap-1">
-                      <input
-                        type="number"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveBudget();
-                          if (e.key === "Escape") cancelEditing();
-                        }}
-                        className="w-24 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        autoFocus
-                      />
-                      <button
-                        onClick={saveBudget}
-                        className="p-1 text-green-600 hover:bg-green-100 rounded"
-                      >
-                        <Save className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        className="p-1 text-red-600 hover:bg-red-100 rounded"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => startEditing(node, month, value)}
-                      className="group flex items-center justify-center gap-1 w-full px-2 py-1 hover:bg-white rounded"
-                    >
-                      <span className="text-sm font-medium">
-                        {formatCurrency(value)}
-                      </span>
-                      <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
-                    </button>
-                  )
-                ) : (
-                  <span className="text-sm font-semibold text-gray-700">
-                    {formatCurrency(getMonthTotal(node.children || [], month))}
-                  </span>
-                )}
-              </td>
-            );
-          })}
-
-          <td className="px-4 py-3 text-right sticky right-0 bg-inherit z-10">
-            <span
-              className={`font-bold ${
-                level === 0 ? "text-lg" : "text-base"
-              } text-gray-900`}
-            >
-              {formatCurrency(node.total || 0)}
-            </span>
-          </td>
-        </tr>
-
-        {hasChildren &&
-          isExpanded &&
-          node.children!.map((c) => renderRow(c, level + 1))}
-      </React.Fragment>
-    );
+    else navigate(-1);
   };
 
   return (
     <div className="max-w-full m-5">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              Presupuesto {activeFY?.name ?? fiscalYear}
-            </h2>
-            <p className="text-gray-600 mt-1">
-              Administra el presupuesto mensual por categoría — {activeGroup}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <label className="text-sm text-gray-600">Año Fiscal:</label>
-            <select
-              className="border rounded-lg px-3 py-2 text-sm"
-              value={selectedFY} // siempre string
-              onChange={(e) => setSelectedFY(e.target.value)}
-              disabled={fiscalYearsQuery.isLoading || !fiscalYears.length}
-            >
-              {fiscalYears.map((fy) => (
-                <option key={fy.id} value={fy.id}>
-                  {fy.name}
-                </option>
-              ))}
-            </select>
-            <div className="px-4 py-2 bg-blue-50 rounded-lg">
-              <span className="text-sm text-blue-700 font-medium">
-                Total: {formatCurrency(grandTotal)}
-              </span>
-            </div>
-            <button
-              onClick={handleBack}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
-            >
-              Volver al Dashboard
-            </button>
-          </div>
-        </div>
+        <BudgetHeader
+          title={`Presupuesto ${activeFY?.name ?? ""}`}
+          fiscalYears={fiscalYears}
+          selectedFY={selectedFY}
+          setSelectedFY={setSelectedFY}
+          grandTotal={grandTotal}
+          onBack={handleBack}
+          loadingFY={fyLoading}
+        />
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100 sticky top-0 z-20">
-              <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider sticky left-0 bg-gray-100 z-30">
-                  Categoría
-                </th>
-                {FISCAL_HEADER.map((m) => (
-                  <th
-                    key={m}
-                    className="px-2 py-3 text-center text-xs font-medium text-gray-700 uppercase tracking-wider min-w-[120px]"
-                  >
-                    {m}
-                  </th>
-                ))}
-                <th className="px-4 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider sticky right-0 bg-gray-100 z-30 min-w-[150px]">
-                  Total Anual
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white">{tree.map((n) => renderRow(n))}</tbody>
-            <tfoot className="bg-gray-100 font-bold sticky bottom-0">
-              <tr>
-                <td className="px-4 py-4 text-left sticky left-0 bg-gray-100 z-30">
-                  TOTAL GENERAL
-                </td>
-                {FISCAL_HEADER.map((_, i) => {
-                  const calMonth = fiscalPosToCalendar(i + 1);
-                  return (
-                    <td
-                      key={calMonth}
-                      className="px-2 py-4 text-center text-gray-900"
-                    >
-                      {formatCurrency(getMonthTotal(tree, calMonth))}
-                    </td>
-                  );
-                })}
-                <td className="px-4 py-4 text-right sticky right-0 bg-gray-100 z-30">
-                  <span className="text-lg">{formatCurrency(grandTotal)}</span>
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+        <BudgetTable
+          tree={tree}
+          headerMonths={FISCAL_HEADER}
+          monthResolver={fiscalPosToCalendar}
+          isExpanded={(rk) => isExpanded(rk)}
+          toggle={(rk) => toggle(rk)}
+          isEditingCell={isEditingCell}
+          startEdit={startEdit}
+          saveEdit={saveEdit}
+          cancelEdit={cancelEditing}
+          editValue={editValue}
+          setEditValue={setEditValue}
+        />
       </div>
 
       <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-4">

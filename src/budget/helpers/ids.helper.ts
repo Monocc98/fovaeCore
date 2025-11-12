@@ -1,0 +1,1 @@
+export const getId = (x: any) => String(x?.id ?? x?._id ?? x);
