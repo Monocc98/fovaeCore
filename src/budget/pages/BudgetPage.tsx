@@ -1,6 +1,5 @@
 import React, { useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
-import { formatCurrency } from "@/helpers";
 import { BudgetHeader } from "../components/BudgetHeader";
 import { BudgetTable } from "../components/BudgetTable";
 import { useCategories } from "../hooks/useCategories";
@@ -66,7 +65,7 @@ export const BudgetPage: React.FC = () => {
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]);
 
   // UI state
-  const { expanded, toggle, isExpanded } = useExpandedTree();
+  const { toggle, isExpanded } = useExpandedTree();
   const { editingCell, editValue, setEditValue, startEditing, cancelEditing } =
     useBudgetEditing();
 

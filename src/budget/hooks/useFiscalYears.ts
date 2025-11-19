@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import type { FiscalYear, FiscalYearResponse, FiscalYearsByCompany } from "@/types";
+import type { FiscalYear, FiscalYearResponse } from "@/types";
 import { getFiscalYearsByIdCompanyAction } from "@/home/actions/fiscalYear.actions";
 
 export const useFiscalYears = (companyId?: string) => {
