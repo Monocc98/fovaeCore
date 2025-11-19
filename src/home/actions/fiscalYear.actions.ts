@@ -1,10 +1,10 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
-import type { FiscalYear } from "../../types";
+import type { FiscalYear, FiscalYearResponse, FiscalYearsByCompany } from "../../types";
 
-export const getFiscalYearsAction = async( idCompany: string ):Promise<FiscalYear[]> => {
-    const { data } = await fovaeCoreApi.get<any>(`/fiscalYear/company/${idCompany}`);
+export const getFiscalYearsByIdCompanyAction = async( idCompany: string ):Promise<FiscalYearResponse[]> => {
+    const { data } = await fovaeCoreApi.get<FiscalYearsByCompany>(`/fiscalYearCompany/${idCompany}`);
 
-    return data.fiscalYears;
+    return data.fiscalYears_Companies ?? [];
 }
 
 export const getFiscalYearByIdAction = async( idFiscalYear: string ):Promise<FiscalYear[]> => {

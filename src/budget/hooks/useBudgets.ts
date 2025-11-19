@@ -46,8 +46,13 @@ export const useBudgets = (
 
   const budgetsByLeaf = useMemo<Record<string, MonthlyBudget>>(() => {
     const map: Record<string, MonthlyBudget> = {};
+
     budgetsResp.forEach((b) => {
       if (b.account !== idAccount) return;
+
+      const expectedYear = yearForMonth(b.month);
+      if (b.year !== expectedYear) return;
+
       const monthWithinFY =
         (startMonth <= 12 && b.month >= startMonth) || startMonth > b.month;
       if (!monthWithinFY) return;
@@ -63,7 +68,7 @@ export const useBudgets = (
       map[leafId][b.month] = (map[leafId][b.month] || 0) + b.amount;
     });
     return map;
-  }, [budgetsResp, idAccount, startMonth]);
+  }, [budgetsResp, idAccount, startMonth, yearForMonth]);
 
   const subsubIndex = useMemo(() => {
     const map = new Map<string, Subsubcategory>();

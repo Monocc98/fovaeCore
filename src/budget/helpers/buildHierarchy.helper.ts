@@ -11,28 +11,32 @@ export type CategoryWithBudgets = NodeBase & {
   budgets: MonthlyBudget;
   children?: CategoryWithBudgets[];
   total?: number;
+  type?: "EXPENSE" | "INCOME"; 
 };
 
 export function buildHierarchyFromNested(
   categories: Category[] = [],
   budgetsByLeaf: Record<string, MonthlyBudget> = {}
 ): CategoryWithBudgets[] {
-  const toLeaf = (leaf: Subsubcategory): CategoryWithBudgets => ({
+
+  const toLeaf = (leaf: Subsubcategory, parentType: "EXPENSE" | "INCOME"): CategoryWithBudgets => ({
     kind: "SUBSUBCATEGORY",
     ...leaf,
     budgets: budgetsByLeaf[leaf._id] || {},
     children: [],
     total: 0,
+    type: parentType, // 👈 hereda tipo
   });
 
-  const toSub = (sub: Subcategory): CategoryWithBudgets => {
-    const children = (sub.subsubcategories ?? []).map(toLeaf);
-    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0 };
+  const toSub = (sub: Subcategory, parentType: "EXPENSE" | "INCOME"): CategoryWithBudgets => {
+    const children = (sub.subsubcategories ?? []).map(ss => toLeaf(ss, parentType));
+    return { kind: "SUBCATEGORY", ...sub, budgets: {}, children, total: 0, type: parentType };
   };
 
   const toCat = (cat: Category): CategoryWithBudgets => {
-    const children = (cat.subcategories ?? []).map(toSub);
-    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0 };
+    const catType = (cat as any).type as ("EXPENSE" | "INCOME") | undefined ?? "EXPENSE";
+    const children = (cat.subcategories ?? []).map(s => toSub(s, catType));
+    return { kind: "CATEGORY", ...cat, budgets: {}, children, total: 0, type: catType };
   };
 
   return categories.map(toCat);
