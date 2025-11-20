@@ -4,7 +4,7 @@ import { normalizeIdDeep } from "@/helpers";
 
 
 export const getHomeAction = async():Promise<HomeResponse> => {
-    const { data } = await fovaeCoreApi.get<HomeResponse>('/home');
+    const { data } = await fovaeCoreApi.get<HomeResponse>(`/home`);
 
     return normalizeIdDeep(data);
 }

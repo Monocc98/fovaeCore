@@ -1,6 +1,7 @@
+import { useAuthStore } from "@/auth/store/auth.store";
 import { getHomeAction } from "@/home/actions/get-home.action";
 import { HeaderHome } from "@/home/components/HeaderHome";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Outlet } from "react-router";
 
 export type OutletContext = {
@@ -8,28 +9,28 @@ export type OutletContext = {
 };
 
 export const HomeLayoutV2 = () => {
-  const queryClient = useQueryClient();
+  const { user } = useAuthStore(); // 👈 usuario actual
+  const userId = user?.id;
 
   const {
     data: overlay,
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["homeOverlay"],
+    queryKey: ["homeOverlay", userId], // 👈 la key depende del usuario
     queryFn: () => getHomeAction(),
-    initialData: () => queryClient.getQueryData(["homeOverlay"]),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: !!userId, // solo cuando hay usuario
+    staleTime: 1000 * 60 * 5,
   });
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <HeaderHome/>
+      <HeaderHome />
       {isLoading && <div className="p-6">Cargando…</div>}
       {isError && (
         <div className="p-6 text-red-600 text-sm">Error al cargar.</div>
       )}
       {overlay && (
-        // ¡Clave! Pasamos el overlay a todo el sub-árbol /v2 sin más peticiones
         <>
           <Outlet context={{ overlay } satisfies OutletContext} />
         </>

@@ -1,67 +1,112 @@
-import type { User } from '@/types';
-import { create } from 'zustand'
-import { loginAction } from '../actions/login.action';
-import { checkAuthAction } from '../actions/check-auth.action';
+// auth/store/auth.store.ts
+import type { User } from "@/types";
+import { create } from "zustand";
+import { loginAction } from "../actions/login.action";
+import { checkAuthAction } from "../actions/check-auth.action";
+import { queryClient } from "@/lib/utils";
 
-type AuthStatus = 'authenticated' | 'no-authenticated' | 'checking';
+type AuthStatus = "authenticated" | "no-authenticated" | "checking";
 
 type AuthState = {
-  // Properties
-    user: User | null;
-    token: string | null;
-    authStatus: AuthStatus;
-  // Getters
+  user: User | null;
+  token: string | null;
+  authStatus: AuthStatus;
 
-  // Actions
-    login: (email: string, password: string) => Promise<boolean>;
-    logout: () => void;
-    checkAuthStatus: () => Promise<boolean>;
-}
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => void;
+  checkAuthStatus: () => Promise<boolean>;
+};
 
-
-export const useAuthStore = create<AuthState>()((set:any) => ({
-  // Implementación del Store
+export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   token: null,
-  authStatus: 'checking',
-  // Actions
-  login: async(email: string, password: string) => {
+  authStatus: "checking",
 
+  // LOGIN
+  login: async (email: string, password: string) => {
     try {
-        const data = await loginAction(email, password);
-        localStorage.setItem("token", data.token);
-        set({ user: data.user, token: data.token, authStatus: 'authenticated' })
-        return true;
-    } catch (error) {
-        localStorage.removeItem("token");
-        set({ user: null, token: null, authStatus: 'no-authenticated'});
-        return false;
-    }
+      const data = await loginAction(email, password);
 
-  },
+      // 1) Guardar token nuevo
+      localStorage.setItem("token", data.token);
 
-  logout: () => {
-    localStorage.removeItem("token");
-    set({ user: null, token: null, authStatus: 'no-authenticated'});
-  },
+      // 2) Limpiar toda la cache de React Query (para no ver datos del usuario anterior)
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      queryClient.removeQueries({ queryKey: ["homeOverlay"] });
 
-  checkAuthStatus: async() => {
-    try {
-      const { user, token } = await checkAuthAction();
+
+      // 3) Actualizar estado
       set({
-        user: user,
-        token: token,
-        authStatus:  'authenticated',
-      })
+        user: data.user,
+        token: data.token,
+        authStatus: "authenticated",
+      });
+
+
       return true;
-    } catch (error) {
-      localStorage.removeItem('token');
+    } catch {
+      localStorage.removeItem("token");
       set({
         user: null,
         token: null,
-        authStatus: 'no-authenticated'
-      })
+        authStatus: "no-authenticated",
+      });
       return false;
     }
-  }
+  },
+
+  // LOGOUT
+  logout: () => {
+    localStorage.removeItem("token");
+
+    set({
+      user: null,
+      token: null,
+      authStatus: "no-authenticated",
+    });
+
+    queryClient.clear();
+
+    // 🔥 Igual aquí: recargar para limpiar TODO estado en memoria // hay que mejorar el login
+    window.location.reload();
+  },
+
+  // CHECK / RENEW al iniciar
+  checkAuthStatus: async () => {
+    const storedToken = localStorage.getItem("token");
+
+    // Sin token => no autenticado
+    if (!storedToken) {
+      set({
+        user: null,
+        token: null,
+        authStatus: "no-authenticated",
+      });
+      return false;
+    }
+
+    try {
+      // usa el interceptor, así que mandará el token del localStorage
+      const { user, token: newToken } = await checkAuthAction();
+
+      localStorage.setItem("token", newToken);
+
+      set({
+        user,
+        token: newToken,
+        authStatus: "authenticated",
+      });
+
+      return true;
+    } catch {
+      localStorage.removeItem("token");
+      set({
+        user: null,
+        token: null,
+        authStatus: "no-authenticated",
+      });
+      return false;
+    }
+  },
 }));
