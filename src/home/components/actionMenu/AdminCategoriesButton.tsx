@@ -1,14 +1,15 @@
 import { LibraryBig } from "lucide-react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 
 export const AdminCategoriesButton = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { companyId } = useParams<{ companyId: string }>();
+  const { groupId } = useParams<{ groupId: string }>();
+  const [searchParams] = useSearchParams();
+  const companyId = searchParams.get("c"); // obtiene el query param
 
   const handleOnCLick = () => {
     const backTo = location.pathname + location.search;
-    navigate(`/company/${companyId}/categories/${companyId}`, {
+    navigate(`/group/${groupId}/categories/${companyId}`, {
       state: { backTo },
     });
   };

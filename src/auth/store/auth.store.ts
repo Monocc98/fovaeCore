@@ -1,5 +1,5 @@
 // auth/store/auth.store.ts
-import type { User } from "@/types";
+import type { User, Permissions } from "@/types";
 import { create } from "zustand";
 import { loginAction } from "../actions/login.action";
 import { checkAuthAction } from "../actions/check-auth.action";
@@ -10,6 +10,7 @@ type AuthStatus = "authenticated" | "no-authenticated" | "checking";
 type AuthState = {
   user: User | null;
   token: string | null;
+  permissions: Permissions | null;
   authStatus: AuthStatus;
 
   login: (email: string, password: string) => Promise<boolean>;
@@ -20,6 +21,7 @@ type AuthState = {
 export const useAuthStore = create<AuthState>()((set) => ({
   user: null,
   token: null,
+  permissions: null,
   authStatus: "checking",
 
   // LOGIN
@@ -40,6 +42,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({
         user: data.user,
         token: data.token,
+        permissions: data.permissions,
         authStatus: "authenticated",
       });
 
@@ -50,6 +53,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({
         user: null,
         token: null,
+        permissions: null,
         authStatus: "no-authenticated",
       });
       return false;
@@ -63,6 +67,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
     set({
       user: null,
       token: null,
+      permissions: null, 
       authStatus: "no-authenticated",
     });
 
@@ -81,6 +86,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({
         user: null,
         token: null,
+        permissions: null,
         authStatus: "no-authenticated",
       });
       return false;
@@ -88,13 +94,14 @@ export const useAuthStore = create<AuthState>()((set) => ({
 
     try {
       // usa el interceptor, así que mandará el token del localStorage
-      const { user, token: newToken } = await checkAuthAction();
+      const { user, token: newToken, permissions } = await checkAuthAction();
 
       localStorage.setItem("token", newToken);
 
       set({
         user,
         token: newToken,
+        permissions: permissions,
         authStatus: "authenticated",
       });
 
@@ -104,6 +111,7 @@ export const useAuthStore = create<AuthState>()((set) => ({
       set({
         user: null,
         token: null,
+        permissions: null,
         authStatus: "no-authenticated",
       });
       return false;

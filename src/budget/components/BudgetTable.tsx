@@ -3,6 +3,9 @@ import { formatCurrency } from "@/helpers";
 import { BudgetRow } from "./BudgetRow";
 import { getMonthTotal, calculateTotals } from "../helpers/totals.helper";
 import type { CategoryWithBudgets } from "../helpers/buildHierarchy.helper";
+import { useParams } from "react-router";
+import { useAuthStore } from "@/auth/store/auth.store";
+import { getAccountPermission } from "@/auth/helpers/getAccountPermission.helper";
 
 interface Props {
   tree: CategoryWithBudgets[];
@@ -31,13 +34,26 @@ export const BudgetTable: React.FC<Props> = ({
   editValue,
   setEditValue,
 }) => {
+  const { idAccount } = useParams<{ idAccount: string }>();
+  const { permissions } = useAuthStore();
+  const { canEdit: canEditThisAccount } = getAccountPermission(
+    permissions,
+    idAccount
+  );
+
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]);
 
   const render = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
     const rowKey = `${node.kind}:${node._id}`;
+
     const isEditing = (m: number) => isEditingCell(rowKey, m);
     const valueFor = (m: number) => node.budgets?.[m] || 0;
-    const onStartEdit = (m: number, v: number) => startEdit(rowKey, m, v);
+
+    const onStartEdit = (m: number, v: number) => {
+      if (!canEditThisAccount) return;
+      startEdit(rowKey, m, v);
+    };
+
     const monthTotalOfChildren = (m: number) =>
       getMonthTotal(node.children || [], m);
 
@@ -54,11 +70,15 @@ export const BudgetTable: React.FC<Props> = ({
           isEditing={isEditing}
           valueFor={valueFor}
           onStartEdit={onStartEdit}
-          onSave={saveEdit}
+          onSave={() => {
+            if (!canEditThisAccount) return;
+            saveEdit();
+          }}
           onCancel={cancelEdit}
           editValue={editValue}
           setEditValue={setEditValue}
           monthTotalOfChildren={monthTotalOfChildren}
+          canEdit={canEditThisAccount}
         />
         {node.children?.length && isExpanded(rowKey)
           ? node.children.map((c) => render(c, level + 1))

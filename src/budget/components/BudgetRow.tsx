@@ -20,6 +20,7 @@ interface RowProps {
   editValue: string;
   setEditValue: (v: string) => void;
   monthTotalOfChildren: (month: number) => number;
+  canEdit: boolean;
 }
 
 export const BudgetRow: React.FC<RowProps> = ({
@@ -38,6 +39,7 @@ export const BudgetRow: React.FC<RowProps> = ({
   editValue,
   setEditValue,
   monthTotalOfChildren,
+  canEdit,
 }) => {
   const hasChildren = !!(node.children && node.children.length);
   const isLeaf = node.kind === "SUBSUBCATEGORY";
@@ -88,11 +90,15 @@ export const BudgetRow: React.FC<RowProps> = ({
           const fiscalPos = i + 1;
           const calMonth = monthResolver(fiscalPos);
           const value = isLeaf ? valueFor(calMonth) : 0;
-          const editing = isEditing(calMonth);
+
+          // 👇 Solo se puede estar en modo edición si es hoja y tiene permiso
+          const editing = isLeaf && canEdit && isEditing(calMonth);
+
           return (
             <td key={calMonth} className="px-2 py-2 text-center">
               {isLeaf ? (
                 editing ? (
+                  // 🔹 Modo edición (solo si canEdit === true)
                   <div className="flex items-center justify-center gap-1">
                     <input
                       type="number"
@@ -118,7 +124,8 @@ export const BudgetRow: React.FC<RowProps> = ({
                       <X className="w-4 h-4" />
                     </button>
                   </div>
-                ) : (
+                ) : canEdit ? (
+                  // 🔹 Tiene permiso: botón con hover + icono
                   <button
                     onClick={() => onStartEdit(calMonth, value)}
                     className="group flex items-center justify-center gap-1 w-full px-2 py-1 hover:bg-white rounded"
@@ -128,8 +135,14 @@ export const BudgetRow: React.FC<RowProps> = ({
                     </span>
                     <Edit2 className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100" />
                   </button>
+                ) : (
+                  // 🔹 NO tiene permiso: solo texto, sin hover ni icono
+                  <span className="text-sm text-gray-700">
+                    {formatCurrency(value)}
+                  </span>
                 )
               ) : (
+                // Filas que son categoría / subcategoría: solo totales
                 <span className="text-sm font-semibold text-gray-700">
                   {formatCurrency(monthTotalOfChildren(calMonth))}
                 </span>

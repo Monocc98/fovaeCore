@@ -3,14 +3,14 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 
 export const BudgetButton = () => {
   const navigate = useNavigate();
-  const { companyId } = useParams<{ companyId: string }>();
+  const { groupId } = useParams<{ groupId: string }>();
   const [searchParams] = useSearchParams();
-  const accountId = searchParams.get("a");
+  const companyId = searchParams.get("c"); // obtiene el query param
 
   const handleOnCLick = () => {
     // const year = new Date().getFullYear();
     const backTo = location.pathname + location.search;
-    navigate(`/company/${companyId}/budget/${accountId}`, {
+    navigate(`/group/${groupId}/budget/${companyId}`, {
       state: { backTo },
     }); //?year=${year}
   };

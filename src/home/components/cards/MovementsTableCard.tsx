@@ -20,6 +20,8 @@ import {
 } from "react-router";
 import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
+import { useAuthStore } from "@/auth/store/auth.store";
+import { getAccountPermission } from "@/auth/helpers/getAccountPermission.helper";
 
 interface Props {
   movements?: Movement[];
@@ -43,6 +45,13 @@ Props) => {
   const [searchParams] = useSearchParams();
 
   const idAccount = searchParams.get("a") || undefined;
+
+  const { permissions } = useAuthStore();
+
+  const { canEdit: canEditThisAccount } = getAccountPermission(
+    permissions,
+    idAccount
+  );
 
   // Normaliza texto: minúsculas, sin acentos, sin espacios extra
   const normalize = (v: unknown) =>
@@ -101,6 +110,8 @@ Props) => {
       });
       // Si el balance cambia, refresca el overlay también
       await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+
+      setMovementToDelete(null);
     },
   });
 
@@ -213,10 +224,12 @@ Props) => {
                   />
                 </div>
               </div>
-              <ListPlus
-                className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
-                onClick={handleNewMovimiento}
-              />
+              {canEditThisAccount && (
+                <ListPlus
+                  className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
+                  onClick={handleNewMovimiento}
+                />
+              )}
             </div>
           </CardTitle>
         </CardHeader>
@@ -280,21 +293,22 @@ Props) => {
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-2">
-                        {/* <button className="p-1 text-blue-600 hover:text-blue-800 transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button> */}
-                        <button
-                          className="p-1 text-green-600 hover:text-green-800 transition-colors"
-                          onClick={() => handleEditMovement(movement.id)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button className="p-1 text-red-600 hover:text-red-800 transition-colors">
-                          <Trash2
-                            className="w-4 h-4"
-                            onClick={() => handleDeleteClick(movement)}
-                          />
-                        </button>
+                        {canEditThisAccount && (
+                          <>
+                            <button
+                              className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                              onClick={() => handleEditMovement(movement.id)}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button className="p-1 text-red-600 hover:text-red-800 transition-colors">
+                              <Trash2
+                                className="w-4 h-4"
+                                onClick={() => handleDeleteClick(movement)}
+                              />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>

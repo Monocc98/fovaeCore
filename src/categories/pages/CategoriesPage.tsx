@@ -53,9 +53,9 @@ export const CategoriesPage = () => {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { companyId, idAccount } = useParams<{
+  const { groupId, companyId } = useParams<{
     companyId: string;
-    idAccount: string;
+    groupId: string;
   }>();
 
   const backTo = (location.state as any)?.backTo as string | undefined;
@@ -407,7 +407,7 @@ export const CategoriesPage = () => {
       navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
     } else if (companyId) {
       // fallback razonable a la vista de la empresa con la cuenta activa marcada
-      navigate(`/company/${companyId}?a=${idAccount}`, { replace: true });
+      navigate(`/group/${groupId}/company/${companyId}`, { replace: true });
     } else {
       navigate(-1); // último recurso
     }

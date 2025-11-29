@@ -10,12 +10,10 @@ export const ActionMenu = ({ mode }: Props) => {
   return (
     <div className="space-y-3">
       {mode === "accounts" ? (
-        <>
-          <AdminCategoriesButton /> <BudgetButton />
-        </>
+        <></>
       ) : mode === "companies" ? (
         <>
-          <AdminAccountsButton />
+          <AdminAccountsButton /> <BudgetButton /> <AdminCategoriesButton />
         </>
       ) : null}
     </div>

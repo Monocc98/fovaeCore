@@ -16,16 +16,18 @@ import { buildHierarchyFromNested } from "../helpers/buildHierarchy.helper";
 import { calculateTotals } from "../helpers/totals.helper";
 
 export const BudgetPage: React.FC = () => {
-  const { companyId, idAccount } = useParams<{
+  const { groupId, companyId } = useParams<{
+    groupId: string;
     companyId: string;
-    idAccount: string;
   }>();
+
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = (location.state as any)?.backTo as string | undefined;
 
   // Datos
   const { categories } = useCategories(companyId);
+
   const {
     fiscalYears,
     selectedFY,
@@ -52,7 +54,7 @@ export const BudgetPage: React.FC = () => {
   );
 
   const { budgetsByLeaf, upsertBudget } = useBudgets(
-    idAccount,
+    companyId,
     startMonth,
     yearForMonth,
     categories
@@ -71,8 +73,10 @@ export const BudgetPage: React.FC = () => {
 
   const isEditingCell = (rowKey: string, month: number) =>
     editingCell?.nodeKey === rowKey && editingCell?.month === month;
+
   const startEdit = (rowKey: string, month: number, current: number) =>
     startEditing(rowKey, month, current);
+
   const saveEdit = () => {
     if (!editingCell) return;
     const amount = parseFloat(editValue) || 0;
@@ -85,7 +89,7 @@ export const BudgetPage: React.FC = () => {
   const handleBack = () => {
     if (backTo) navigate(backTo, { replace: true });
     else if (companyId)
-      navigate(`/company/${companyId}?a=${idAccount}`, { replace: true });
+      navigate(`/group/${groupId}/company/${companyId}`, { replace: true });
     else navigate(-1);
   };
 

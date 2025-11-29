@@ -1,4 +1,3 @@
-
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
 import { BrowsePage, MovementsUpsertPage } from "@/home/pages";
 import { HomeLayoutV2, ContainerLayout } from "@/home/layouts";
@@ -11,9 +10,8 @@ import { RedirectIfAuth } from "@/auth/guards/RedirectIfAuth";
 import { RequiredAuth } from "@/auth/guards/RequiredAuth";
 
 export const appRouter = createBrowserRouter([
-
   {
-    path: '/auth',
+    path: "/auth",
     element: <RedirectIfAuth />,
     children: [
       {
@@ -25,9 +23,9 @@ export const appRouter = createBrowserRouter([
 
   // V2 PROTOTIPO
   {
-        element: <RequiredAuth  />,
-        children: [
-          {
+    element: <RequiredAuth />,
+    children: [
+      {
         path: "/",
         element: <HomeLayoutV2 />,
         children: [
@@ -44,6 +42,14 @@ export const appRouter = createBrowserRouter([
                 path: "accounts/:companyId",
                 element: <AccountsPage />,
               },
+              {
+                path: "budget/:companyId",
+                element: <BudgetPage />,
+              },
+              {
+                path: "categories/:companyId",
+                element: <CategoriesPage />,
+              },
             ],
           },
           {
@@ -59,19 +65,10 @@ export const appRouter = createBrowserRouter([
                 path: "movement/new/:idAccount",
                 element: <MovementsUpsertPage />,
               },
-              {
-                path: "categories/:idAccount",
-                element: <CategoriesPage />,
-              },
-              {
-                path: "budget/:idAccount",
-                element: <BudgetPage />,
-              },
             ],
           },
         ],
-        }
-      ]
-    
+      },
+    ],
   },
 ]);

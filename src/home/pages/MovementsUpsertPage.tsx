@@ -237,9 +237,36 @@ export const MovementsUpsertPage = () => {
       // valida que eligió la hoja
       return;
     }
-    if (mode === "edit") updateMut.mutate(form);
-    else createMut.mutate(form);
+
+    // Buscar la categoría seleccionada
+    const parentCat = parentCategories.find((c) => c._id === form.categoryId);
+    const isExpense = parentCat?.type === "EXPENSE"; // <- depende de tu modelo
+
+    // Normalizar monto según tipo
+    const rawAmount = Number(form.amount) || 0;
+    const normalizedAmount = isExpense
+      ? -Math.abs(rawAmount) // egreso -> siempre negativo
+      : Math.abs(rawAmount); // ingreso -> siempre positivo
+
+    const payload: FormValues = {
+      ...form,
+      amount: normalizedAmount,
+    };
+
+    if (mode === "edit") {
+      updateMut.mutate(payload);
+    } else {
+      createMut.mutate(payload);
+    }
   };
+
+  const watchedAmount = watch("amount");
+  const parentCat = parentCategories.find((c) => c._id === categoryId);
+  const isExpense = parentCat?.type === "EXPENSE";
+
+  const previewAmount = isExpense
+    ? -Math.abs(Number(watchedAmount) || 0)
+    : Math.abs(Number(watchedAmount) || 0);
 
   return (
     /* Movement Form */
@@ -348,9 +375,7 @@ export const MovementsUpsertPage = () => {
                   </label>
                   <input
                     type="text"
-                    {...register("comments", {
-                      required: true,
-                    })}
+                    {...register("comments")}
                     placeholder="Describe el movimiento financiero..."
                     className={cn(
                       "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
@@ -359,11 +384,6 @@ export const MovementsUpsertPage = () => {
                       }
                     )}
                   />
-                  {errors.comments && (
-                    <p className="text-red-500 text-sm">
-                      El comentario es requerido
-                    </p>
-                  )}
                 </div>
               </div>
               <div>
@@ -527,17 +547,17 @@ export const MovementsUpsertPage = () => {
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Tipo:</span>
                   <span className="text-sm font-medium">
-                    {watch("amount") > 0 ? "Ingreso" : "Egreso"}
+                    {isExpense ? "Egreso" : "Ingreso"}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Monto:</span>
                   <span
                     className={`text-sm font-medium ${getTransactionColor(
-                      watch("amount")
+                      previewAmount
                     )}`}
                   >
-                    {watch("amount") ? `$${watch("amount")}` : "0"}
+                    {previewAmount ? `$${previewAmount}` : "0"}
                   </span>
                 </div>
                 <div className="flex justify-between">

@@ -9,7 +9,8 @@ export type OutletContext = {
 };
 
 export const HomeLayoutV2 = () => {
-  const { user } = useAuthStore(); // 👈 usuario actual
+  const { user, permissions } = useAuthStore(); // 👈 usuario actual
+  console.log("AUTH STORE → permissions:", permissions);
   const userId = user?.id;
 
   const {

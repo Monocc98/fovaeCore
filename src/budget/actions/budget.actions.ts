@@ -1,12 +1,12 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
 import type { Budget } from "../../types";
 
-export interface BudgetsByAccountResponse {
+export interface BudgetsByCompanyResponse {
     budgets: Budget[];
 }
 
-export const getBudgetsAction = async( idAccount: string ):Promise<BudgetsByAccountResponse> => {
-    const { data } = await fovaeCoreApi.get<BudgetsByAccountResponse>(`/budgets/account/${idAccount}`);
+export const getBudgetsAction = async( IdCompany: string ):Promise<BudgetsByCompanyResponse> => {
+    const { data } = await fovaeCoreApi.get<BudgetsByCompanyResponse>(`/budgets/company/${IdCompany}`);
 
     return data;
 }
