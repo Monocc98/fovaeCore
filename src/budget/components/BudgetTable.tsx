@@ -3,9 +3,6 @@ import { formatCurrency } from "@/helpers";
 import { BudgetRow } from "./BudgetRow";
 import { getMonthTotal, calculateTotals } from "../helpers/totals.helper";
 import type { CategoryWithBudgets } from "../helpers/buildHierarchy.helper";
-import { useParams } from "react-router";
-import { useAuthStore } from "@/auth/store/auth.store";
-import { getAccountPermission } from "@/auth/helpers/getAccountPermission.helper";
 
 interface Props {
   tree: CategoryWithBudgets[];
@@ -19,6 +16,7 @@ interface Props {
   cancelEdit: () => void;
   editValue: string;
   setEditValue: (v: string) => void;
+  canEdit: boolean;
 }
 
 export const BudgetTable: React.FC<Props> = ({
@@ -33,14 +31,8 @@ export const BudgetTable: React.FC<Props> = ({
   cancelEdit,
   editValue,
   setEditValue,
+  canEdit,
 }) => {
-  const { idAccount } = useParams<{ idAccount: string }>();
-  const { permissions } = useAuthStore();
-  const { canEdit: canEditThisAccount } = getAccountPermission(
-    permissions,
-    idAccount
-  );
-
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]);
 
   const render = (node: CategoryWithBudgets, level = 0): React.ReactNode => {
@@ -50,7 +42,7 @@ export const BudgetTable: React.FC<Props> = ({
     const valueFor = (m: number) => node.budgets?.[m] || 0;
 
     const onStartEdit = (m: number, v: number) => {
-      if (!canEditThisAccount) return;
+      if (!canEdit) return; // si no puede editar, no abrimos edición
       startEdit(rowKey, m, v);
     };
 
@@ -70,15 +62,12 @@ export const BudgetTable: React.FC<Props> = ({
           isEditing={isEditing}
           valueFor={valueFor}
           onStartEdit={onStartEdit}
-          onSave={() => {
-            if (!canEditThisAccount) return;
-            saveEdit();
-          }}
+          onSave={saveEdit}
           onCancel={cancelEdit}
           editValue={editValue}
           setEditValue={setEditValue}
           monthTotalOfChildren={monthTotalOfChildren}
-          canEdit={canEditThisAccount}
+          canEdit={canEdit}
         />
         {node.children?.length && isExpanded(rowKey)
           ? node.children.map((c) => render(c, level + 1))

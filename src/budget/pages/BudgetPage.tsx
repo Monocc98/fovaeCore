@@ -14,6 +14,7 @@ import {
 } from "../helpers/fiscalCalendar.helper";
 import { buildHierarchyFromNested } from "../helpers/buildHierarchy.helper";
 import { calculateTotals } from "../helpers/totals.helper";
+import { useAuthStore } from "@/auth/store/auth.store";
 
 export const BudgetPage: React.FC = () => {
   const { groupId, companyId } = useParams<{
@@ -24,6 +25,31 @@ export const BudgetPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = (location.state as any)?.backTo as string | undefined;
+
+  const { permissions } = useAuthStore();
+
+  const canEditBudget = useMemo(() => {
+    if (!permissions || !companyId) return false;
+
+    // 1) SUPER_ADMIN puede todo
+    if (permissions.globalRole === "SUPER_ADMIN") return true;
+
+    const companyPerm = permissions.companyPermissions?.find(
+      (cp) => cp.companyId === companyId
+    );
+    if (!companyPerm) return false;
+
+    // 2) ADMIN de la empresa puede editar presupuesto
+    if (companyPerm.baseRole === "ADMIN") return true;
+
+    // 3) (nuevo) Si tiene al menos una cuenta editable dentro de esta empresa,
+    //    también le dejamos editar el presupuesto
+    const anyAccountEditable = companyPerm.accounts?.some((a) => a.canEdit);
+    if (anyAccountEditable) return true;
+
+    // 4) si no cumple nada, no puede editar
+    return false;
+  }, [permissions, companyId]);
 
   // Datos
   const { categories } = useCategories(companyId);
@@ -118,6 +144,7 @@ export const BudgetPage: React.FC = () => {
           cancelEdit={cancelEditing}
           editValue={editValue}
           setEditValue={setEditValue}
+          canEdit={canEditBudget}
         />
       </div>
 
