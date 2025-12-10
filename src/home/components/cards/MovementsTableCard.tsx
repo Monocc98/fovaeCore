@@ -40,6 +40,8 @@ Props) => {
     null
   );
 
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
   const location = useLocation();
   const { companyId } = useParams<{ companyId: string }>();
   const [searchParams] = useSearchParams();
@@ -168,8 +170,14 @@ Props) => {
       rows = rows.filter((m) => Math.abs(m.amount) >= filters.minAmount!);
     }
 
+    rows = rows.sort((a, b) => {
+      const da = new Date(a.occurredAt).getTime();
+      const db = new Date(b.occurredAt).getTime();
+      return sortDir === "asc" ? da - db : db - da;
+    });
+
     return rows;
-  }, [movements, q, filters]);
+  }, [movements, q, filters, sortDir]);
 
   const navigate = useNavigate();
 
@@ -238,8 +246,16 @@ Props) => {
             <table className="w-full">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() =>
+                      setSortDir(sortDir === "asc" ? "desc" : "asc")
+                    }
+                  >
                     Fecha
+                    <span className="ml-1 text-gray-400">
+                      {sortDir === "asc" ? "▲" : "▼"}
+                    </span>
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Descripción
