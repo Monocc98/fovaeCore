@@ -6,6 +6,20 @@ export interface MovementsByAccountResponse {
     balance: number;
 }
 
+export interface ImportSolucionFactibleResponse {
+  importBatchId: string;
+  accountId: string;
+  source: string;
+  totalRows: number;
+  concepts: Array<{
+    externalConceptKey: string;
+    externalCategoryRaw: string;
+    count: number;
+    existingRule: any | null;
+  }>;
+}
+
+
 export const getMovementsAction = async( idAccount: string ):Promise<MovementsByAccountResponse> => {
     const { data } = await fovaeCoreApi.get<MovementsByAccountResponse>(`/movements/account/${idAccount}`);
 
@@ -43,3 +57,26 @@ export const deleteMovementAction = async(idMovement: string) => {
     
     return data;
 }
+
+export const importSolucionFactibleAction = async (
+  accountId: string,
+  file: File
+): Promise<ImportSolucionFactibleResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);          // nombre que espera Multer
+  formData.append("accountId", accountId);
+
+  // OJO: ruta relativa a TU API, SIN /api si ya lo pone el baseURL
+  const { data } = await fovaeCoreApi.post<ImportSolucionFactibleResponse>(
+    "/movements/imports/solucion-factible", // ajusta si tu ruta es distinta
+    formData,
+    {
+      // en navegador no es obligatorio, Axios genera el boundary
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return data;
+};

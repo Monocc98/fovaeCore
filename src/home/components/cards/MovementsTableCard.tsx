@@ -205,8 +205,8 @@ Props) => {
 
   return (
     <>
-      <Card className="h-fit">
-        <CardHeader className="pb-3">
+      <Card className="h-[520px] flex flex-col">
+        <CardHeader className="pb-3 shrink-0">
           <CardTitle className="text-lg font-semibold">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -233,8 +233,8 @@ Props) => {
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="overflow-auto h-[calc(100%-120px)]">
+        <CardContent className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-auto">
             <table className="w-full">
               <thead className="bg-gray-50 sticky top-0">
                 <tr>

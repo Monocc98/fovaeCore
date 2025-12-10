@@ -26,6 +26,8 @@ import {
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useOverlay } from "../hooks/useOverlay";
+import { ImportDataModal } from "../components/modals/ImportDataModal";
+import { queryClient } from "@/lib/utils";
 
 type Level = "groups" | "companies" | "accounts";
 type Tab = {
@@ -65,6 +67,13 @@ export const BrowsePage = () => {
     dateTo: undefined,
     minAmount: undefined,
   });
+
+  // ⬇️ NUEVO: estado para el modal de importación
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [importAccount, setImportAccount] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const tabs = useMemo<Tab[]>(() => {
     if (!overlay) return [];
@@ -197,7 +206,18 @@ export const BrowsePage = () => {
                   title="Menú Acciones"
                   icon={<Settings className="w-5 h-5 text-gray-400" />}
                 >
-                  <ActionMenu mode={level} />
+                  <ActionMenu
+                    mode={level}
+                    onImportDataClick={
+                      level === "accounts"
+                        ? () => {
+                            // g es la cuenta actual en este TabsContent
+                            setImportAccount({ id: g.id, name: g.name });
+                            setIsImportOpen(true);
+                          }
+                        : undefined
+                    }
+                  />
                 </InfoCard>
               </div>
 
@@ -245,6 +265,22 @@ export const BrowsePage = () => {
           </TabsContent>
         ))}
       </Tabs>
+      {level === "accounts" && importAccount && (
+        <ImportDataModal
+          isOpen={isImportOpen}
+          accountId={importAccount.id}
+          accountName={importAccount.name}
+          onClose={() => setIsImportOpen(false)}
+          onSuccess={async () => {
+            setIsImportOpen(false);
+
+            // Refrescar movimientos de esa cuenta
+            await queryClient.invalidateQueries({
+              queryKey: ["movementsOverlay", importAccount.id],
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
