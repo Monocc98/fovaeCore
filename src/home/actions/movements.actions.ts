@@ -6,10 +6,10 @@ export interface MovementsByAccountResponse {
     balance: number;
 }
 
-export interface ImportSolucionFactibleResponse {
+export interface ImportMovementsResponse {
   importBatchId: string;
   accountId: string;
-  source: string;
+  source: "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR" | string;
   totalRows: number;
   concepts: Array<{
     externalConceptKey: string;
@@ -19,6 +19,12 @@ export interface ImportSolucionFactibleResponse {
   }>;
 }
 
+export type ImportSource = "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR";
+
+export interface ConfirmImportResponse {
+  message: string;
+  insertedCount: number;
+}
 
 export const getMovementsAction = async( idAccount: string ):Promise<MovementsByAccountResponse> => {
     const { data } = await fovaeCoreApi.get<MovementsByAccountResponse>(`/movements/account/${idAccount}`);
@@ -61,13 +67,13 @@ export const deleteMovementAction = async(idMovement: string) => {
 export const importSolucionFactibleAction = async (
   accountId: string,
   file: File
-): Promise<ImportSolucionFactibleResponse> => {
+): Promise<ImportMovementsResponse> => {
   const formData = new FormData();
   formData.append("file", file);          // nombre que espera Multer
   formData.append("accountId", accountId);
 
   // OJO: ruta relativa a TU API, SIN /api si ya lo pone el baseURL
-  const { data } = await fovaeCoreApi.post<ImportSolucionFactibleResponse>(
+  const { data } = await fovaeCoreApi.post<ImportMovementsResponse>(
     "/movements/imports/solucion-factible", // ajusta si tu ruta es distinta
     formData,
     {
@@ -76,6 +82,39 @@ export const importSolucionFactibleAction = async (
         "Content-Type": "multipart/form-data",
       },
     }
+  );
+
+  return data;
+};
+
+export const importServoEscolarAction = async (
+  accountId: string,
+  file: File
+): Promise<ImportMovementsResponse> => {
+  const formData = new FormData();
+  formData.append("file", file);          // nombre que espera Multer
+  formData.append("accountId", accountId);
+
+  const { data } = await fovaeCoreApi.post<ImportMovementsResponse>(
+    "/movements/imports/servo-escolar",    // ✅ ajusta a tu route real
+    formData,
+    {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    }
+  );
+
+  return data;
+};
+
+export const confirmImportAction = async (
+  batchId: string,
+  concepts: Array<{ externalConceptKey: string; subsubcategoryId: string }>
+): Promise<ConfirmImportResponse> => {
+  const { data } = await fovaeCoreApi.post<ConfirmImportResponse>(
+    `/movements/imports/solucion-factible/${batchId}/confirm`,
+    { concepts }
   );
 
   return data;

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { CheckCircle2, AlertCircle, ListChecks } from "lucide-react";
 import { useParams } from "react-router";
 import { useCategories } from "@/budget/hooks/useCategories";
+import { confirmImportAction } from "@/home/actions/movements.actions";
 
 interface Concept {
   externalConceptKey: string;
@@ -158,27 +159,21 @@ export const ConceptMappingStep = ({
           mappings[concept.externalConceptKey].subsubcategoryId!,
       }));
 
-      const response = await fetch(
-        `/api/movements/import-solucion-factible/${batchId}/confirm`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ concepts: conceptList }),
-        }
-      );
+      const data = await confirmImportAction(batchId, conceptList);
 
-      if (!response.ok) {
-        throw new Error("Error al confirmar importación");
-      }
-
-      const data = await response.json();
       console.log(`${data.insertedCount} movimientos importados exitosamente`);
       onSuccess();
     } catch (err: any) {
       console.error("Error confirming import:", err);
-      setError(err.message || "Error al confirmar la importación");
+
+      // ✅ saca el error real del backend (axios)
+      const msg =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        err?.message ||
+        "Error al confirmar la importación";
+
+      setError(msg);
     } finally {
       setLoading(false);
     }
