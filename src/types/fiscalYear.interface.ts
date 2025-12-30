@@ -8,6 +8,7 @@ export interface FiscalYearResponse {
     fiscalYear: FiscalYear;
     company:    Company;
     id:         string;
+    budgetLocked?: boolean;
 }
 
 export interface FiscalYear {

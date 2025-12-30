@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import { BudgetHeader } from "../components/BudgetHeader";
 import { BudgetTable } from "../components/BudgetTable";
@@ -15,6 +15,9 @@ import {
 import { buildHierarchyFromNested } from "../helpers/buildHierarchy.helper";
 import { calculateTotals } from "../helpers/totals.helper";
 import { useAuthStore } from "@/auth/store/auth.store";
+import { Switch } from "@/components/ui/switch";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toggleBudgetLockAction } from "../actions/budget.actions";
 
 export const BudgetPage: React.FC = () => {
   const { groupId, companyId } = useParams<{
@@ -22,34 +25,17 @@ export const BudgetPage: React.FC = () => {
     companyId: string;
   }>();
 
+  const queryClient = useQueryClient();
+
   const navigate = useNavigate();
   const location = useLocation();
   const backTo = (location.state as any)?.backTo as string | undefined;
 
   const { permissions } = useAuthStore();
 
-  const canEditBudget = useMemo(() => {
-    if (!permissions || !companyId) return false;
-
-    // 1) SUPER_ADMIN puede todo
-    if (permissions.globalRole === "SUPER_ADMIN") return true;
-
-    const companyPerm = permissions.companyPermissions?.find(
-      (cp) => cp.companyId === companyId
-    );
-    if (!companyPerm) return false;
-
-    // 2) ADMIN de la empresa puede editar presupuesto
-    if (companyPerm.baseRole === "ADMIN") return true;
-
-    // 3) (nuevo) Si tiene al menos una cuenta editable dentro de esta empresa,
-    //    también le dejamos editar el presupuesto
-    const anyAccountEditable = companyPerm.accounts?.some((a) => a.canEdit);
-    if (anyAccountEditable) return true;
-
-    // 4) si no cumple nada, no puede editar
-    return false;
-  }, [permissions, companyId]);
+  const isSuperAdmin = useMemo(() => {
+    return permissions?.globalRole === "SUPER_ADMIN";
+  }, [permissions]);
 
   // Datos
   const { categories } = useCategories(companyId);
@@ -59,8 +45,11 @@ export const BudgetPage: React.FC = () => {
     selectedFY,
     setSelectedFY,
     activeFY,
+    activeLink,
     isLoading: fyLoading,
   } = useFiscalYears(companyId);
+
+  const budgetLocked = !!activeLink?.budgetLocked;
 
   const startMonth = useMemo(() => {
     if (!activeFY) return 1;
@@ -92,10 +81,39 @@ export const BudgetPage: React.FC = () => {
   }, [categories, budgetsByLeaf]);
   const grandTotal = useMemo(() => calculateTotals([...tree]), [tree]);
 
+  const canEditBudget = useMemo(() => {
+    if (budgetLocked) return false;
+
+    if (!permissions || !companyId) return false;
+
+    // 1) SUPER_ADMIN puede todo
+    if (permissions.globalRole === "SUPER_ADMIN") return true;
+
+    const companyPerm = permissions.companyPermissions?.find(
+      (cp) => cp.companyId === companyId
+    );
+    if (!companyPerm) return false;
+
+    // 2) ADMIN de la empresa puede editar presupuesto
+    if (companyPerm.baseRole === "ADMIN") return true;
+
+    // 3) (nuevo) Si tiene al menos una cuenta editable dentro de esta empresa,
+    //    también le dejamos editar el presupuesto
+    const anyAccountEditable = companyPerm.accounts?.some((a) => a.canEdit);
+    if (anyAccountEditable) return true;
+
+    // 4) si no cumple nada, no puede editar
+    return false;
+  }, [permissions, companyId, budgetLocked]);
+
   // UI state
   const { toggle, isExpanded } = useExpandedTree();
   const { editingCell, editValue, setEditValue, startEditing, cancelEditing } =
     useBudgetEditing();
+
+  useEffect(() => {
+    if (budgetLocked) cancelEditing();
+  }, [budgetLocked, cancelEditing]);
 
   const isEditingCell = (rowKey: string, month: number) =>
     editingCell?.nodeKey === rowKey && editingCell?.month === month;
@@ -104,6 +122,7 @@ export const BudgetPage: React.FC = () => {
     startEditing(rowKey, month, current);
 
   const saveEdit = () => {
+    if (budgetLocked) return;
     if (!editingCell) return;
     const amount = parseFloat(editValue) || 0;
     const [kind, leafId] = editingCell.nodeKey.split(":");
@@ -119,6 +138,36 @@ export const BudgetPage: React.FC = () => {
     else navigate(-1);
   };
 
+  const lockMut = useMutation({
+    mutationFn: (id: string) => toggleBudgetLockAction(id),
+
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["fiscalYears", companyId] });
+
+      const prev = queryClient.getQueryData<any>(["fiscalYears", companyId]);
+
+      // optimistic: invierte budgetLocked SOLO en el link que coincide
+      queryClient.setQueryData(["fiscalYears", companyId], (old: any[] = []) =>
+        old.map((link: any) => {
+          const linkId = String(link.id ?? link._id ?? "");
+          if (linkId !== String(id)) return link;
+          return { ...link, budgetLocked: !Boolean(link.budgetLocked) };
+        })
+      );
+
+      return { prev };
+    },
+
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev)
+        queryClient.setQueryData(["fiscalYears", companyId], ctx.prev);
+    },
+
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["fiscalYears", companyId] });
+    },
+  });
+
   return (
     <div className="max-w-full m-5">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -131,6 +180,35 @@ export const BudgetPage: React.FC = () => {
           onBack={handleBack}
           loadingFY={fyLoading}
         />
+        {isSuperAdmin && activeLink && (
+          <div className="px-6 py-3 border-b bg-gray-50 flex items-center justify-between">
+            <div>
+              <div className="font-medium text-gray-900">
+                Bloquear edición de presupuesto
+              </div>
+              <div className="text-xs text-gray-600">
+                Si está activo, ningún usuario podrá modificar los montos.
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-700">
+                {budgetLocked ? "Bloqueado" : "Editable"}
+              </span>
+
+              <Switch
+                checked={budgetLocked}
+                disabled={!activeLink || lockMut.isPending}
+                onCheckedChange={() => {
+                  if (!activeLink) return;
+                  lockMut.mutate(
+                    String(activeLink.id ?? (activeLink as any)._id)
+                  );
+                }}
+              />
+            </div>
+          </div>
+        )}
 
         <BudgetTable
           tree={tree}

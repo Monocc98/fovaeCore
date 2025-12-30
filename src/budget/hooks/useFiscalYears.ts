@@ -11,6 +11,8 @@ export const useFiscalYears = (companyId?: string) => {
     staleTime: 1000 * 60 * 10,
   });
 
+  const links = useMemo(() => data ?? [], [data]);
+
   // ✅ Normalizamos aquí a FiscalYear[] (usando tus tipos)
   const fiscalYears = useMemo<FiscalYear[]>(() => {
     const links = data ?? [];
@@ -38,5 +40,12 @@ export const useFiscalYears = (companyId?: string) => {
     [fiscalYears, selectedFY]
   );
 
-  return { fiscalYears, selectedFY, setSelectedFY, activeFY, isLoading };
+  const activeLink = useMemo(() => {
+    // link.fiscalYear puede venir populated con {id,...}
+    return links.find((l: any) => String(l.fiscalYear?.id ?? l.fiscalYear) === selectedFY) ?? null;
+  }, [links, selectedFY]);
+
+  console.log(activeLink);
+  
+  return { fiscalYears, selectedFY, setSelectedFY, activeFY, activeLink, isLoading };
 };

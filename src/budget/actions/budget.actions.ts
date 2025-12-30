@@ -41,3 +41,11 @@ export const deleteBudgetAction = async(idBudget: string) => {
     
     return data;
 }
+
+export const toggleBudgetLockAction = async (idFiscalYearCompany: string) => {
+  // ajusta la URL a tu backend real
+  const { data } = await fovaeCoreApi.post(
+    `/fiscalYearCompany/${idFiscalYearCompany}/lockBudget`
+  );
+  return data; // { fiscalYear_Company: ... }
+};

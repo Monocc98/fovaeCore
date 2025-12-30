@@ -274,9 +274,14 @@ export const BrowsePage = () => {
           onSuccess={async () => {
             setIsImportOpen(false);
 
-            // Refrescar movimientos de esa cuenta
+            // refresca movimientos
             await queryClient.invalidateQueries({
               queryKey: ["movementsOverlay", importAccount.id],
+            });
+
+            // refresca overlay (tabs / balances)
+            await queryClient.invalidateQueries({
+              queryKey: ["homeOverlay"],
             });
           }}
         />
