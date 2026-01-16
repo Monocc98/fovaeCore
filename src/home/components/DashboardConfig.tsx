@@ -7,36 +7,18 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { CustomBreadcrumb } from "@/components/custom/CustomBreadcrumb";
 import { useParams, useSearchParams } from "react-router";
-import { useQuery } from "@tanstack/react-query";
-import { getHomeAction } from "../actions/get-home.action";
-import { buildBreadcrumbFromHome } from "../helpers/buildBreadcrumb.helper";
 import { useFiscalYears } from "@/budget/hooks/useFiscalYears";
 
 export const DashboardConfig = () => {
-  const { groupId, companyId } = useParams<{
-    groupId?: string;
+  const { companyId } = useParams<{
+    // groupId?: string;
     companyId?: string;
   }>();
 
   const [searchParams] = useSearchParams();
-  const accountId = searchParams.get("a") ?? undefined;
+
   const companyIdParam = searchParams.get("c") ?? undefined;
-
-  // si ya tienes este query en otro lado con el mismo queryKey,
-  // React Query comparte la cache (no duplicas peticiones).
-  const { data: home } = useQuery({
-    queryKey: ["homeOverlay"],
-    queryFn: getHomeAction,
-  });
-
-  const breadcrumbItems = buildBreadcrumbFromHome(
-    home,
-    groupId,
-    companyId,
-    accountId
-  );
 
   const {
     fiscalYears,
@@ -48,7 +30,7 @@ export const DashboardConfig = () => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
       <div className="flex items-center justify-between mb-4">
-        <CustomBreadcrumb items={breadcrumbItems} />
+        {/* <CustomBreadcrumb items={breadcrumbItems} /> */}
         {/* Optional: Last updated info */}
         <div className="text-xs text-gray-500">
           Última actualización: {new Date().toLocaleDateString("es-ES")}

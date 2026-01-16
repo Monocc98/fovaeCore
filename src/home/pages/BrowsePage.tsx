@@ -19,6 +19,7 @@ import {
   BarChart3,
   Building2,
   Calculator,
+  ClipboardClock,
   Filter,
   PieChart,
   Settings,
@@ -28,12 +29,15 @@ import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useOverlay } from "../hooks/useOverlay";
 import { ImportDataModal } from "../components/modals/ImportDataModal";
 import { queryClient } from "@/lib/utils";
+import { PendingProcessesCard } from "../components/cards/PendingProcessCard";
 
 type Level = "groups" | "companies" | "accounts";
 type Tab = {
   id: string;
   name: string;
   balance: number;
+  ingresos: number;
+  egresos: number;
   content?: Company[] | Account[];
 };
 
@@ -83,6 +87,8 @@ export const BrowsePage = () => {
         id: g.id ?? (g as any)._id,
         name: g.name,
         balance: g.balance,
+        ingresos: g.ingresos,
+        egresos: g.egresos,
         content: g.companies,
       }));
     }
@@ -94,6 +100,8 @@ export const BrowsePage = () => {
         id: c.id ?? (c as any)._id,
         name: c.name,
         balance: c.balance,
+        ingresos: c.ingresos,
+        egresos: c.egresos,
         content: c.accounts,
       }));
     }
@@ -106,6 +114,8 @@ export const BrowsePage = () => {
               id: a.id ?? (a as any)._id,
               name: a.name,
               balance: a.balance,
+              ingresos: a.ingresos,
+              egresos: a.egresos,
             }));
           }
         }
@@ -200,7 +210,11 @@ export const BrowsePage = () => {
                   icon={<Calculator className="w-5 h-5 text-gray-400" />}
                 >
                   {/* Balance del grupo (usa 0 si aún no lo calculas) */}
-                  <FinancialSummary balance={g.balance ?? 0} />
+                  <FinancialSummary
+                    balance={g.balance ?? 0}
+                    income={g.ingresos ?? 0}
+                    expenses={g.egresos ?? 0}
+                  />
                 </InfoCard>
                 <InfoCard
                   title="Menú Acciones"
@@ -246,19 +260,46 @@ export const BrowsePage = () => {
               {/* Columna derecha */}
               <div className="col-span-12 lg:col-span-3 space-y-6">
                 {level != "accounts" ? (
-                  <InfoCard
-                    title="Distribución"
-                    icon={<PieChart className="w-5 h-5 text-gray-400" />}
-                  >
-                    <DistributionCard />
-                  </InfoCard>
+                  <>
+                    <InfoCard
+                      title="Distribución"
+                      icon={<PieChart className="w-5 h-5 text-gray-400" />}
+                    >
+                      <DistributionCard
+                        income={g.ingresos}
+                        expenses={g.egresos}
+                      />
+                    </InfoCard>
+                  </>
                 ) : (
-                  <InfoCard
-                    title="Filtros"
-                    icon={<Filter className="w-5 h-5 text-gray-400" />}
-                  >
-                    <FilterCard value={filters} onChange={setFilters} />
-                  </InfoCard>
+                  <>
+                    <InfoCard
+                      title="Filtros"
+                      icon={<Filter className="w-5 h-5 text-gray-400" />}
+                    >
+                      <FilterCard value={filters} onChange={setFilters} />
+                    </InfoCard>
+                    <InfoCard
+                      title="Procesos Pendientes"
+                      icon={
+                        <ClipboardClock className="w-5 h-5 text-gray-400" />
+                      }
+                    >
+                      {g.id === activeId && (
+                        <PendingProcessesCard
+                          accountId={g.id}
+                          onProcessClick={(p) => {
+                            // TODO: abrir modal/route de resumen
+                            console.log("Retomar batch:", p.id);
+                            // navigate(`/imports/${p.id}`)  // recomendado
+                          }}
+                          onViewAll={() => {
+                            // navigate(`/company/${companyId}/imports`) o lo que decidas
+                          }}
+                        />
+                      )}
+                    </InfoCard>
+                  </>
                 )}
               </div>
             </div>

@@ -44,8 +44,6 @@ export const useFiscalYears = (companyId?: string) => {
     // link.fiscalYear puede venir populated con {id,...}
     return links.find((l: any) => String(l.fiscalYear?.id ?? l.fiscalYear) === selectedFY) ?? null;
   }, [links, selectedFY]);
-
-  console.log(activeLink);
   
   return { fiscalYears, selectedFY, setSelectedFY, activeFY, activeLink, isLoading };
 };

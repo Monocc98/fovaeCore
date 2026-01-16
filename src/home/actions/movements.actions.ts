@@ -26,6 +26,41 @@ export interface ConfirmImportResponse {
   insertedCount: number;
 }
 
+export type ImportBatchStatus = "PENDING" | "PROCESSED" | "FAILED" | "PROCESSING";
+export type ImportBatchSource = "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR" | string;
+
+export interface PendingImportBatch {
+  id: string;
+  source: ImportBatchSource;
+  status: ImportBatchStatus;
+  createdAt: string;
+  totalRows: number;
+}
+
+export interface PendingImportBatchesResponse {
+  batches: PendingImportBatch[];
+}
+
+export interface ImportBatchSummaryResponse {
+  importBatchId: string;
+  accountId: string;
+  source: ImportBatchSource;
+  status: ImportBatchStatus; // en tu backend devuelve PENDING
+  totalRows: number;
+  concepts: Array<{
+    externalConceptKey: string;
+    externalCategoryRaw: string;
+    count: number;
+    existingRule: {
+      id: string;
+      subsubcategory: string;
+      timesConfirmed: number;
+      timesCorrected: number;
+      locked: boolean;
+    } | null;
+  }>;
+}
+
 export const getMovementsAction = async( idAccount: string ):Promise<MovementsByAccountResponse> => {
     const { data } = await fovaeCoreApi.get<MovementsByAccountResponse>(`/movements/account/${idAccount}`);
 
@@ -63,6 +98,26 @@ export const deleteMovementAction = async(idMovement: string) => {
     
     return data;
 }
+
+export const getPendingImportBatchesByAccountAction = async (
+  idAccount: string
+): Promise<PendingImportBatchesResponse> => {
+  const { data } = await fovaeCoreApi.get<PendingImportBatchesResponse>(
+    `/movements/importBatches/pending/${idAccount}`
+  );
+
+  return data;
+};
+
+export const getImportBatchSummaryAction = async (
+  idBatch: string
+): Promise<ImportBatchSummaryResponse> => {
+  const { data } = await fovaeCoreApi.get<ImportBatchSummaryResponse>(
+    `/movements/importBatches/summary/${idBatch}`
+  );
+
+  return data;
+};
 
 export const importSolucionFactibleAction = async (
   accountId: string,
@@ -119,3 +174,4 @@ export const confirmImportAction = async (
 
   return data;
 };
+

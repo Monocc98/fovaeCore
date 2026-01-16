@@ -2,16 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatCurrency,
   formatDate,
-  getStatusBadge,
   getTransactionColor,
   getTransactionIcon,
 } from "@/helpers";
 import { deleteMovementAction } from "@/home/actions/movements.actions";
-// import { useHomeStore } from "@/home/hooks/useHomeStore";
 import type { Movement } from "@/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { useDeferredValue, useMemo, useRef, useState } from "react";
 import {
   useLocation,
   useNavigate,
@@ -22,6 +20,7 @@ import { DeleteMovementAlert } from "../alerts/DeleteMovementAlert";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
 import { useAuthStore } from "@/auth/store/auth.store";
 import { getAccountPermission } from "@/auth/helpers/getAccountPermission.helper";
+import { useVirtualizer } from "@tanstack/react-virtual";
 
 interface Props {
   movements?: Movement[];
@@ -34,28 +33,27 @@ export const MovementsTableCard = ({
   movements = [],
   filters,
   onChangeFilters,
-}: // accountId,
-Props) => {
+}: Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
   );
-
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const location = useLocation();
   const { companyId } = useParams<{ companyId: string }>();
   const [searchParams] = useSearchParams();
-
   const idAccount = searchParams.get("a") || undefined;
 
   const { permissions } = useAuthStore();
-
   const { canEdit: canEditThisAccount } = getAccountPermission(
     permissions,
     idAccount
   );
 
-  // Normaliza texto: minúsculas, sin acentos, sin espacios extra
+  // ✅ 1) parentRef ANTES del virtualizer
+  const parentRef = useRef<HTMLDivElement | null>(null);
+
+  // Normaliza texto
   const normalize = (v: unknown) =>
     String(v ?? "")
       .toLowerCase()
@@ -66,11 +64,9 @@ Props) => {
   const queryClient = useQueryClient();
 
   const deleteMut = useMutation({
-    // ahora recibe { id, accountId }
     mutationFn: ({ id }: { id: string; accountId: string }) =>
       deleteMovementAction(id),
 
-    // 🔹 Optimistic update
     onMutate: async ({ id, accountId }) => {
       await queryClient.cancelQueries({
         queryKey: ["movementsOverlay", accountId],
@@ -81,7 +77,6 @@ Props) => {
         accountId,
       ]);
 
-      // Ajusta a la forma real de tu respuesta: { movements: Movement[] } o Movement[]
       const next = prev?.movements
         ? {
             ...prev,
@@ -98,21 +93,16 @@ Props) => {
       return { prev, accountId };
     },
 
-    // 🔹 Si falla, rollback
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) {
+      if (ctx?.prev)
         queryClient.setQueryData(["movementsOverlay", ctx.accountId], ctx.prev);
-      }
     },
 
-    // 🔹 Al terminar, asegura refetch con clave EXACTA
     onSettled: async (_data, _err, vars) => {
       await queryClient.invalidateQueries({
         queryKey: ["movementsOverlay", vars.accountId],
       });
-      // Si el balance cambia, refresca el overlay también
       await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
-
       setMovementToDelete(null);
     },
   });
@@ -125,11 +115,9 @@ Props) => {
   const deferredQ = useDeferredValue(filters.q);
   const q = normalize(deferredQ);
 
-  // Filtrar por descripción, comentario y (opcional) sub-subcategoría
   const filteredMovements = useMemo(() => {
-    let rows = movements;
+    let rows = [...movements];
 
-    // texto (desc / comment / subsub)
     if (q) {
       rows = rows.filter((m) =>
         [m.description, (m as any).comment, m.subsubcategory?.name].some((f) =>
@@ -138,23 +126,12 @@ Props) => {
       );
     }
 
-    // tipo IN/OUT
     if (filters.type !== "ALL") {
       rows = rows.filter((m) =>
         filters.type === "INCOME" ? m.amount > 0 : m.amount < 0
       );
     }
 
-    // estado (si lo tienes en tu modelo; aquí asumo "completed" / "pending")
-    // if (filters.status !== "ALL") {
-    //   rows = rows.filter((m) =>
-    //     filters.status === "completed"
-    //       ? m.status === "completed"
-    //       : m.status === "pending"
-    //   );
-    // }
-
-    // fechas
     const from = filters.dateFrom
       ? new Date(filters.dateFrom + "T00:00:00")
       : undefined;
@@ -165,12 +142,11 @@ Props) => {
     if (from) rows = rows.filter((m) => new Date(m.occurredAt) >= from);
     if (to) rows = rows.filter((m) => new Date(m.occurredAt) <= to);
 
-    // monto mínimo
     if (typeof filters.minAmount === "number") {
       rows = rows.filter((m) => Math.abs(m.amount) >= filters.minAmount!);
     }
 
-    rows = rows.sort((a, b) => {
+    rows.sort((a, b) => {
       const da = new Date(a.occurredAt).getTime();
       const db = new Date(b.occurredAt).getTime();
       return sortDir === "asc" ? da - db : db - da;
@@ -179,50 +155,59 @@ Props) => {
     return rows;
   }, [movements, q, filters, sortDir]);
 
+  // ✅ 2) virtualizer ya ve parentRef correctamente
+  const rowVirtualizer = useVirtualizer({
+    count: filteredMovements.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 72, // 🔧 sube a 72 (con py-4 suele ser más real)
+    overscan: 10,
+  });
+
   const navigate = useNavigate();
 
   const handleNewMovimiento = () => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/movement/new/${idAccount}`, {
-      state: {
-        state: { backTo },
-      },
+      state: { state: { backTo } },
     });
   };
 
   const handleEditMovement = (idMovement: string) => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/movement/${idMovement}/edit`, {
-      state: {
-        state: { backTo },
-      },
+      state: { state: { backTo } },
     });
   };
 
-  const handleDeleteClick = (movement: Movement) => {
-    setMovementToDelete(movement); // abrir modal
-  };
-
+  const handleDeleteClick = (movement: Movement) =>
+    setMovementToDelete(movement);
   const cancelDelete = () => setMovementToDelete(null);
 
   const confirmDelete = () => {
     if (!movementToDelete) return;
-    const accountId = idAccount!; // el que ya lees del search param "a"
+    const accountId = idAccount!;
     deleteMut.mutate({ id: movementToDelete.id, accountId });
   };
 
+  // ✅ 3) columnas fijas para alinear header + filas
+  const COL_DATE = "w-[140px]";
+  const COL_DESC = "w-[300px]";
+  const COL_AMOUNT = "w-[180px]";
+  const COL_ACTIONS = "w-[120px]";
+
   return (
     <>
-      <Card className="h-[520px] flex flex-col">
+      <Card className="h-130 flex flex-col">
         <CardHeader className="pb-3 shrink-0">
           <CardTitle className="text-lg font-semibold">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold text-gray-900">
                 Movimientos Financieros
               </h3>
+
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Buscar movimientos..."
@@ -232,6 +217,7 @@ Props) => {
                   />
                 </div>
               </div>
+
               {canEditThisAccount && (
                 <ListPlus
                   className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
@@ -241,101 +227,156 @@ Props) => {
             </div>
           </CardTitle>
         </CardHeader>
+
         <CardContent className="flex-1 overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50 sticky top-0">
+          <div ref={parentRef} className="flex-1 overflow-auto">
+            {/* ✅ table-fixed + widths */}
+            <table className="w-full table-fixed">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
                   <th
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none ${COL_DATE}`}
                     onClick={() =>
                       setSortDir(sortDir === "asc" ? "desc" : "asc")
                     }
                   >
-                    Fecha
+                    Fecha{" "}
                     <span className="ml-1 text-gray-400">
                       {sortDir === "asc" ? "▲" : "▼"}
                     </span>
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                  <th
+                    className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${COL_DESC}`}
+                  >
                     Descripción
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                  <th
+                    className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${COL_AMOUNT}`}
+                  >
                     Monto
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+
+                  <th
+                    className={`px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${COL_ACTIONS}`}
+                  >
                     Acciones
                   </th>
                 </tr>
               </thead>
+
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMovements.map((movement) => (
-                  <tr
-                    key={movement.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(movement.occurredAt)}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      <div className="flex items-center space-x-2">
-                        {getTransactionIcon(
-                          movement.amount,
-                          movement.transferId
-                        )}
-                        <div className="truncate max-w-xs">
-                          {movement.description}
-                          <div className="text-xs text-gray-500">
-                            {movement.subsubcategory.name}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                      <span
-                        className={getTransactionColor(
-                          movement.amount,
-                          movement.transferId
-                        )}
-                      >
-                        {formatCurrency(movement.amount)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {getStatusBadge("completed")}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        {canEditThisAccount && (
-                          <>
-                            <button
-                              className="p-1 text-green-600 hover:text-green-800 transition-colors"
-                              onClick={() => handleEditMovement(movement.id)}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button className="p-1 text-red-600 hover:text-red-800 transition-colors">
-                              <Trash2
-                                className="w-4 h-4"
-                                onClick={() => handleDeleteClick(movement)}
-                              />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredMovements.length === 0 && (
+                {filteredMovements.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={4}
                       className="px-4 py-6 text-center text-sm text-gray-500"
                     >
                       No se encontraron movimientos.
+                    </td>
+                  </tr>
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="p-0">
+                      <div
+                        style={{
+                          height: `${rowVirtualizer.getTotalSize()}px`,
+                          position: "relative",
+                        }}
+                      >
+                        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                          const movement = filteredMovements[virtualRow.index];
+
+                          return (
+                            <div
+                              key={movement.id}
+                              style={{
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                width: "100%",
+                                transform: `translateY(${virtualRow.start}px)`,
+                              }}
+                            >
+                              {/* ✅ también table-fixed + mismas widths */}
+                              <table className="w-full table-fixed">
+                                <tbody>
+                                  <tr className="hover:bg-gray-50 transition-colors">
+                                    <td
+                                      className={`px-4 py-4 whitespace-nowrap text-sm text-gray-900 ${COL_DATE}`}
+                                    >
+                                      {formatDate(movement.occurredAt)}
+                                    </td>
+
+                                    <td
+                                      className={`px-4 py-4 text-sm text-gray-900 ${COL_DESC}`}
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <span className="shrink-0 w-5 h-5 flex items-center justify-center">
+                                          {getTransactionIcon(
+                                            movement.amount,
+                                            movement.transferId
+                                          )}
+                                        </span>
+                                        <div className="min-w-0">
+                                          <div className="truncate">
+                                            {movement.description}
+                                          </div>
+                                          <div className="text-xs text-gray-500 truncate">
+                                            {movement.subsubcategory.name}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </td>
+
+                                    <td
+                                      className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${COL_AMOUNT}`}
+                                    >
+                                      <span
+                                        className={getTransactionColor(
+                                          movement.amount,
+                                          movement.transferId
+                                        )}
+                                      >
+                                        {formatCurrency(movement.amount)}
+                                      </span>
+                                    </td>
+
+                                    <td
+                                      className={`px-4 py-4 whitespace-nowrap text-sm text-gray-500 ${COL_ACTIONS}`}
+                                    >
+                                      <div className="flex items-center space-x-2">
+                                        {canEditThisAccount && (
+                                          <>
+                                            <button
+                                              className="p-1 text-green-600 hover:text-green-800 transition-colors"
+                                              onClick={() =>
+                                                handleEditMovement(movement.id)
+                                              }
+                                            >
+                                              <Edit className="w-4 h-4" />
+                                            </button>
+
+                                            <button
+                                              className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                                              onClick={() =>
+                                                handleDeleteClick(movement)
+                                              }
+                                            >
+                                              <Trash2 className="w-4 h-4" />
+                                            </button>
+                                          </>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </td>
                   </tr>
                 )}
@@ -344,6 +385,7 @@ Props) => {
           </div>
         </CardContent>
       </Card>
+
       {movementToDelete && (
         <DeleteMovementAlert
           movement={movementToDelete}

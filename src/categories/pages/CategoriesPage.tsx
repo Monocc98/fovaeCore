@@ -1,5 +1,5 @@
 import { Edit, Plus, Search, Trash2 } from "lucide-react";
-import { getLevelBadge, getScopeBadge } from "@/helpers";
+import { getLevelBadge } from "@/helpers";
 import { useForm } from "react-hook-form";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -152,9 +152,9 @@ export const CategoriesPage = () => {
 
   // --- Filtros UI ---
   const [searchTerm, setSearchTerm] = useState("");
-  const [scopeFilter, setScopeFilter] = useState<"ALL" | "COMPANY" | "ACCOUNT">(
-    "ALL"
-  );
+  // const [scopeFilter, setScopeFilter] = useState<"ALL" | "COMPANY" | "ACCOUNT">(
+  //   "ALL"
+  // );
 
   const [catFilter, setCatFilter] = useState<string>(""); // categoría padre
   const [subFilter, setSubFilter] = useState<string>(""); // subcategoría
@@ -188,13 +188,13 @@ export const CategoriesPage = () => {
         r.path.toLowerCase().includes(q) ||
         (r.type?.toLowerCase().includes(q) ?? false);
 
-      const matchScope = scopeFilter === "ALL" || r.scope === scopeFilter;
+      // const matchScope = scopeFilter === "ALL" || r.scope === scopeFilter;
       const matchCat = !catFilter || r.catId === catFilter;
       const matchSub = !subFilter || r.subId === subFilter;
 
-      return matchText && matchScope && matchCat && matchSub;
+      return matchText && matchCat && matchSub;
     });
-  }, [rows, searchTerm, scopeFilter, catFilter, subFilter]);
+  }, [rows, searchTerm, catFilter, subFilter]);
 
   const createMut = useMutation({
     mutationFn: async (payload: CategoryFormValues) => {
@@ -518,7 +518,7 @@ export const CategoriesPage = () => {
                   </div>
                 )}
 
-                <div className="col-span-2">
+                {/* <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Alcance
                   </label>
@@ -529,9 +529,9 @@ export const CategoriesPage = () => {
                     <option value="COMPANY">Empresa</option>
                     <option value="ACCOUNT">Cuenta</option>
                   </select>
-                </div>
+                </div> */}
 
-                <div className="col-span-1 flex items-end">
+                <div className="col-span-2 flex items-end">
                   <button
                     type="submit"
                     // disabled={!categoryFormData.name}
@@ -558,7 +558,7 @@ export const CategoriesPage = () => {
                 />
               </div>
 
-              <select
+              {/* <select
                 value={scopeFilter}
                 onChange={(e) =>
                   setScopeFilter(
@@ -570,7 +570,7 @@ export const CategoriesPage = () => {
                 <option value="ALL">Todos los alcances</option>
                 <option value="COMPANY">Solo Empresa</option>
                 <option value="ACCOUNT">Solo Cuenta</option>
-              </select>
+              </select> */}
             </div>
 
             <select
@@ -616,9 +616,9 @@ export const CategoriesPage = () => {
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Nivel
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Alcance
-                  </th>
+                  </th> */}
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Acciones
                   </th>
@@ -636,9 +636,9 @@ export const CategoriesPage = () => {
                     <td className="px-4 py-4 whitespace-nowrap">
                       {getLevelBadge(category.level)}
                     </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
+                    {/* <td className="px-4 py-4 whitespace-nowrap">
                       {getScopeBadge(category.scope)}
-                    </td>
+                    </td> */}
                     <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                       <div className="flex items-center space-x-2">
                         <button

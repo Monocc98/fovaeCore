@@ -7,5 +7,7 @@ export interface Account {
     name:    string;
     type:    AccountType;
     balance: number;
+    ingresos: number;
+    egresos: number;
     company?: string;
 }
