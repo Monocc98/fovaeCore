@@ -23,6 +23,7 @@ import {
   Filter,
   PieChart,
   Settings,
+  TableProperties,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
@@ -30,6 +31,8 @@ import { useOverlay } from "../hooks/useOverlay";
 import { ImportDataModal } from "../components/modals/ImportDataModal";
 import { queryClient } from "@/lib/utils";
 import { PendingProcessesCard } from "../components/cards/PendingProcessCard";
+import { getBucketsSummaryAction, getBudgetVsActualAction } from "../actions/get-home.action";
+import { CategorySummaryTable } from "../components/cards/CategorySummary";
 
 type Level = "groups" | "companies" | "accounts";
 type Tab = {
@@ -60,8 +63,8 @@ export const BrowsePage = () => {
   const level: Level = companyId
     ? "accounts"
     : groupId
-    ? "companies"
-    : "groups";
+      ? "companies"
+      : "groups";
 
   const [filters, setFilters] = useState<MovementsFilters>({
     q: "",
@@ -70,6 +73,20 @@ export const BrowsePage = () => {
     dateFrom: undefined,
     dateTo: undefined,
     minAmount: undefined,
+  });
+
+  const { data: budgetOverlay } = useQuery({
+    queryKey: ["budgetOverlay"],
+    queryFn: getBudgetVsActualAction,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const { data: bucketsOverlay } = useQuery({
+    queryKey: ["homeBucketsSummary"],
+    queryFn: getBucketsSummaryAction,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   // ⬇️ NUEVO: estado para el modal de importación
@@ -132,14 +149,50 @@ export const BrowsePage = () => {
       level === "groups"
         ? qGroup
         : level === "companies"
-        ? qCompany
-        : level === "accounts"
-        ? qAccount
-        : undefined;
+          ? qCompany
+          : level === "accounts"
+            ? qAccount
+            : undefined;
 
     if (asked && tabs.some((t) => t.id === asked)) return asked; // si existe el tab pedido
     return tabs[0]?.id ?? ""; // fallback: primero
   }, [level, qGroup, qCompany, qAccount, tabs]);
+
+  const currentSummaryNode = useMemo(() => {
+    if (!bucketsOverlay?.groups?.length) return null;
+
+    const id = String(activeId);
+    const gid = String(groupId ?? "");
+
+    // nivel grupos: el tab activo es un grupo
+    if (level === "groups") {
+      const group = bucketsOverlay.groups.find((gr: any) => String(gr._id) === id);
+      if (!group) return null;
+
+      return {
+        title: `Resumen por Categorías • ${group.name}`,
+        summary: group.summary,
+        companies: group.companies,
+      };
+    }
+
+    // nivel companies: estamos dentro de un groupId, y el tab activo es una company
+    if (level === "companies") {
+      const group = bucketsOverlay.groups.find((gr: any) => String(gr._id) === gid);
+      if (!group) return null;
+
+      const company = group.companies.find((co: any) => String(co._id) === id);
+      if (!company) return null;
+
+      return {
+        title: `Resumen por Categorías • ${company.name}`,
+        summary: company.summary,
+        companies: [], // en vista empresa, normalmente no quieres breakdown
+      };
+    }
+
+    return null;
+  }, [bucketsOverlay, level, activeId, groupId]);
 
   const handleTabChange = (nextId: string) => {
     const sp = new URLSearchParams(searchParams);
@@ -177,134 +230,194 @@ export const BrowsePage = () => {
         </TabsList>
 
         <DashboardConfig />
-        {tabs.map((g) => (
-          <TabsContent key={g.id} value={g.id}>
-            <div className="grid grid-cols-12 gap-6 mt-6">
-              <div className="col-span-12 lg:col-span-3 space-y-6">
-                {level != "accounts" ? (
+        {tabs.map((g) => {
+
+          // ===============================
+          // PASO 2: resolver budgetNode
+          // ===============================
+          const budgetNode = (() => {
+            if (!budgetOverlay) return null;
+
+            const getId = (x: any) => String(x?.id ?? x?._id ?? "");
+
+            // Si estamos en nivel GRUPOS
+            if (level === "groups") {
+              return (
+                budgetOverlay.groups?.find(
+                  (gr: any) => getId(gr) === String(g.id)
+                ) ?? null
+              );
+            }
+
+            // Si estamos en nivel EMPRESAS
+            if (level === "companies") {
+              const grp =
+                budgetOverlay.groups?.find(
+                  (gr: any) => getId(gr) === String(groupId)
+                ) ?? null;
+
+              return (
+                grp?.companies?.find(
+                  (co: any) => getId(co) === String(g.id)
+                ) ?? null
+              );
+            }
+
+            return null;
+          })();
+
+          // ===============================
+          // RETURN NORMAL
+          // ===============================
+          return (
+            <TabsContent key={g.id} value={g.id}>
+              <div className="grid grid-cols-12 gap-6 mt-6">
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                  {level != "accounts" ? (
+                    <InfoCard
+                      title={level === "groups" ? "Empresas" : "Cuentas"}
+                      icon={<Building2 className="w-5 h-5 text-gray-400" />}
+                    >
+                      {/* Pasa las empresas del grupo activo */}
+                      <AccountsCard
+                        content={g.content}
+                        onClick={(content: any) => {
+                          const targetId = content.id ?? content._id;
+                          if (level === "groups") {
+                            navigate(
+                              `/group/${g.id ?? (g as any)._id}?c=${targetId}`
+                            );
+                          } else if (level === "companies") {
+                            navigate(
+                              `/company/${g.id ?? (g as any)._id}?a=${targetId}`
+                            );
+                          }
+                        }}
+                      />
+                    </InfoCard>
+                  ) : null}
+
                   <InfoCard
-                    title={level === "groups" ? "Empresas" : "Cuentas"}
-                    icon={<Building2 className="w-5 h-5 text-gray-400" />}
+                    title="Resumen Financiero"
+                    icon={<Calculator className="w-5 h-5 text-gray-400" />}
                   >
-                    {/* Pasa las empresas del grupo activo */}
-                    <AccountsCard
-                      content={g.content}
-                      onClick={(content: any) => {
-                        const targetId = content.id ?? content._id;
-                        if (level === "groups") {
-                          navigate(
-                            `/group/${g.id ?? (g as any)._id}?c=${targetId}`
-                          );
-                        } else if (level === "companies") {
-                          navigate(
-                            `/company/${g.id ?? (g as any)._id}?a=${targetId}`
-                          );
-                        }
-                      }}
+                    {/* Balance del grupo (usa 0 si aún no lo calculas) */}
+                    <FinancialSummary
+                      balance={g.balance ?? 0}
+                      income={g.ingresos ?? 0}
+                      expenses={g.egresos ?? 0}
                     />
                   </InfoCard>
-                ) : null}
-
-                <InfoCard
-                  title="Resumen Financiero"
-                  icon={<Calculator className="w-5 h-5 text-gray-400" />}
-                >
-                  {/* Balance del grupo (usa 0 si aún no lo calculas) */}
-                  <FinancialSummary
-                    balance={g.balance ?? 0}
-                    income={g.ingresos ?? 0}
-                    expenses={g.egresos ?? 0}
-                  />
-                </InfoCard>
-                <InfoCard
-                  title="Menú Acciones"
-                  icon={<Settings className="w-5 h-5 text-gray-400" />}
-                >
-                  <ActionMenu
-                    mode={level}
-                    onImportDataClick={
-                      level === "accounts"
-                        ? () => {
+                  <InfoCard
+                    title="Menú Acciones"
+                    icon={<Settings className="w-5 h-5 text-gray-400" />}
+                  >
+                    <ActionMenu
+                      mode={level}
+                      onImportDataClick={
+                        level === "accounts"
+                          ? () => {
                             // g es la cuenta actual en este TabsContent
                             setImportAccount({ id: g.id, name: g.name });
                             setIsImportOpen(true);
                           }
-                        : undefined
-                    }
-                  />
-                </InfoCard>
-              </div>
-
-              {/* Columna central */}
-              <div className="col-span-12 lg:col-span-6 space-y-6">
-                {level != "accounts" ? (
-                  <InfoCard
-                    title="Análisis Financiero Mensual"
-                    icon={<BarChart3 className="w-5 h-5 text-gray-400" />}
-                    description="Comparación mensual y distribución general"
-                  >
-                    <FinancialAnalysis />
-                  </InfoCard>
-                ) : (
-                  // Solo monta el tab ACTIVO para no disparar varias queries
-                  g.id === activeId && (
-                    <AccountsSection
-                      accountId={g.id}
-                      filters={filters}
-                      onChangeFilters={setFilters}
-                    />
-                  )
-                )}
-              </div>
-
-              {/* Columna derecha */}
-              <div className="col-span-12 lg:col-span-3 space-y-6">
-                {level != "accounts" ? (
-                  <>
-                    <InfoCard
-                      title="Distribución"
-                      icon={<PieChart className="w-5 h-5 text-gray-400" />}
-                    >
-                      <DistributionCard
-                        income={g.ingresos}
-                        expenses={g.egresos}
-                      />
-                    </InfoCard>
-                  </>
-                ) : (
-                  <>
-                    <InfoCard
-                      title="Filtros"
-                      icon={<Filter className="w-5 h-5 text-gray-400" />}
-                    >
-                      <FilterCard value={filters} onChange={setFilters} />
-                    </InfoCard>
-                    <InfoCard
-                      title="Procesos Pendientes"
-                      icon={
-                        <ClipboardClock className="w-5 h-5 text-gray-400" />
+                          : undefined
                       }
-                    >
-                      {g.id === activeId && (
-                        <PendingProcessesCard
-                          accountId={g.id}
-                          onProcessClick={(p) => {
-                            // TODO: abrir modal/route de resumen
-                            console.log("Retomar batch:", p.id);
-                            // navigate(`/imports/${p.id}`)  // recomendado
-                          }}
-                          onViewAll={() => {
-                            // navigate(`/company/${companyId}/imports`) o lo que decidas
-                          }}
+                    />
+                  </InfoCard>
+                </div>
+
+                {/* Columna central */}
+                <div className="col-span-12 lg:col-span-6 space-y-6">
+                  {level != "accounts" ? (
+                    <>
+                      <InfoCard
+                        title="Análisis Financiero Mensual"
+                        icon={<BarChart3 className="w-5 h-5 text-gray-400" />}
+                        description="Comparación mensual y distribución general"
+                      >
+                        <FinancialAnalysis rows={budgetNode?.budgetVsActual ?? []} />
+                      </InfoCard>
+                      <InfoCard
+                        title="Resumen por Categorías"
+                        icon={<TableProperties className="w-5 h-5 text-gray-400" />}
+                        description="Clasificación de ingresos y egresos totales"
+                      >
+                        {g.id === activeId ? (
+                          currentSummaryNode ? (
+                            <CategorySummaryTable
+                              title={currentSummaryNode.title}
+                              summary={currentSummaryNode.summary}
+                              companies={currentSummaryNode.companies}
+                              showCompaniesBreakdown={level === "groups"} // solo en grupos
+                            />
+                          ) : (
+                            <div className="text-sm text-gray-500">No hay datos para mostrar.</div>
+                          )
+                        ) : null}
+                      </InfoCard>
+                    </>
+                  ) : (
+                    // Solo monta el tab ACTIVO para no disparar varias queries
+                    g.id === activeId && (
+                      <AccountsSection
+                        accountId={g.id}
+                        filters={filters}
+                        onChangeFilters={setFilters}
+                      />
+                    )
+                  )}
+                </div>
+
+                {/* Columna derecha */}
+                <div className="col-span-12 lg:col-span-3 space-y-6">
+                  {level != "accounts" ? (
+                    <>
+                      <InfoCard
+                        title="Distribución"
+                        icon={<PieChart className="w-5 h-5 text-gray-400" />}
+                      >
+                        <DistributionCard
+                          income={g.ingresos}
+                          expenses={g.egresos}
                         />
-                      )}
-                    </InfoCard>
-                  </>
-                )}
+                      </InfoCard>
+                    </>
+                  ) : (
+                    <>
+                      <InfoCard
+                        title="Filtros"
+                        icon={<Filter className="w-5 h-5 text-gray-400" />}
+                      >
+                        <FilterCard value={filters} onChange={setFilters} />
+                      </InfoCard>
+                      <InfoCard
+                        title="Procesos Pendientes"
+                        icon={
+                          <ClipboardClock className="w-5 h-5 text-gray-400" />
+                        }
+                      >
+                        {g.id === activeId && (
+                          <PendingProcessesCard
+                            accountId={g.id}
+                            onProcessClick={(p) => {
+                              // TODO: abrir modal/route de resumen
+                              console.log("Retomar batch:", p.id);
+                              // navigate(`/imports/${p.id}`)  // recomendado
+                            }}
+                            onViewAll={() => {
+                              // navigate(`/company/${companyId}/imports`) o lo que decidas
+                            }}
+                          />
+                        )}
+                      </InfoCard>
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          </TabsContent>
-        ))}
+            </TabsContent>
+          );
+        })}
       </Tabs>
       {level === "accounts" && importAccount && (
         <ImportDataModal

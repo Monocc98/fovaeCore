@@ -1,0 +1,186 @@
+import { formatCurrency } from "@/helpers";
+
+export interface Summary {
+    ingresos: number;
+    egresosFijos: number;
+    egresosVariables: number;
+    family: number;
+    total: number;
+    unmappedCount?: number;
+}
+
+export interface SummaryCompany {
+    _id: string;
+    name: string;
+    summary: Summary;
+}
+
+interface Props {
+    title?: string;
+    summary: Summary;
+    companies?: SummaryCompany[]; // opcional para breakdown
+    showCompaniesBreakdown?: boolean;
+}
+
+const pct = (value: number, ingresos: number) =>
+    ingresos > 0 ? `${((value / ingresos) * 100).toFixed(1)}%` : "0%";
+
+export const CategorySummaryTable = ({
+    title = "Resumen por Categorías",
+    summary,
+    companies = [],
+    showCompaniesBreakdown = false,
+}: Props) => {
+    const rows = [
+        {
+            key: "INCOME",
+            label: "Ingresos",
+            dot: "bg-green-500",
+            hover: "hover:bg-green-50",
+            text: "text-green-600",
+            value: summary.ingresos,
+            percentage: "100%",
+        },
+        {
+            key: "FIXED_EXPENSE",
+            label: "Egresos Fijos",
+            dot: "bg-red-500",
+            hover: "hover:bg-red-50",
+            text: "text-red-600",
+            value: summary.egresosFijos,
+            percentage: pct(summary.egresosFijos, summary.ingresos),
+        },
+        {
+            key: "VARIABLE_EXPENSE",
+            label: "Egresos Variables",
+            dot: "bg-orange-500",
+            hover: "hover:bg-orange-50",
+            text: "text-orange-600",
+            value: summary.egresosVariables,
+            percentage: pct(summary.egresosVariables, summary.ingresos),
+        },
+        {
+            key: "FAMILY",
+            label: "Family",
+            dot: "bg-blue-500",
+            hover: "hover:bg-blue-50",
+            text: "text-blue-600",
+            value: summary.family,
+            percentage: pct(summary.family, summary.ingresos),
+        },
+    ] as const;
+
+    const totalDot = summary.total >= 0 ? "bg-green-600" : "bg-red-600";
+    const totalText = summary.total >= 0 ? "text-green-600" : "text-red-600";
+
+    return (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div className="bg-lineal-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
+                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                    Clasificación de ingresos y egresos totales
+                </p>
+            </div>
+
+            <div className="overflow-x-auto">
+                <table className="w-full">
+                    <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Categoría</th>
+                            <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Monto</th>
+                            <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Porcentaje</th>
+                        </tr>
+                    </thead>
+
+                    <tbody className="divide-y divide-gray-100">
+                        {rows.map((r) => (
+                            <tr key={r.key} className={`${r.hover} transition-colors`}>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center space-x-3">
+                                        <div className={`w-3 h-3 rounded-full ${r.dot}`} />
+                                        <span className="font-medium text-gray-900">{r.label}</span>
+                                    </div>
+                                </td>
+                                <td className={`px-6 py-4 text-right font-semibold ${r.text}`}>
+                                    {formatCurrency(r.value)}
+                                </td>
+                                <td className="px-6 py-4 text-right text-sm text-gray-600">
+                                    {r.percentage}
+                                </td>
+                            </tr>
+                        ))}
+
+                        <tr className="bg-gray-50 font-bold border-t-2 border-gray-300">
+                            <td className="px-6 py-4">
+                                <div className="flex items-center space-x-3">
+                                    <div className={`w-3 h-3 rounded-full ${totalDot}`} />
+                                    <span className="text-gray-900">Balance Total</span>
+                                </div>
+                            </td>
+                            <td className={`px-6 py-4 text-right text-lg ${totalText}`}>
+                                {formatCurrency(summary.total)}
+                            </td>
+                            <td className="px-6 py-4 text-right text-sm text-gray-600">
+                                {pct(summary.total, summary.ingresos)}
+                            </td>
+                        </tr>
+
+                        {!!summary.unmappedCount && summary.unmappedCount > 0 && (
+                            <tr className="bg-yellow-50">
+                                <td className="px-6 py-3 text-sm text-yellow-800" colSpan={3}>
+                                    Hay {summary.unmappedCount} movimientos sin bucket.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            {showCompaniesBreakdown && companies.length > 0 && (
+                <div className="border-t border-gray-200">
+                    <div className="px-6 py-4 bg-gray-50">
+                        <h3 className="text-sm font-semibold text-gray-800">Desglose por empresa</h3>
+                    </div>
+
+                    <div className="divide-y divide-gray-100">
+                        {companies.map((c) => (
+                            <div key={c._id} className="px-6 py-4">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="font-semibold text-gray-900">{c.name}</div>
+                                    <div className={`text-sm font-semibold ${c.summary.total >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                        {formatCurrency(c.summary.total)}
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                    <div>
+                                        <div className="text-gray-500">Ingresos</div>
+                                        <div className="font-semibold text-green-600">{formatCurrency(c.summary.ingresos)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-gray-500">Egresos Fijos</div>
+                                        <div className="font-semibold text-red-600">{formatCurrency(c.summary.egresosFijos)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-gray-500">Egresos Variables</div>
+                                        <div className="font-semibold text-orange-600">{formatCurrency(c.summary.egresosVariables)}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-gray-500">Family</div>
+                                        <div className="font-semibold text-blue-600">{formatCurrency(c.summary.family)}</div>
+                                    </div>
+                                </div>
+
+                                {!!c.summary.unmappedCount && c.summary.unmappedCount > 0 && (
+                                    <div className="mt-3 text-xs text-yellow-700">
+                                        Movimientos sin bucket: {c.summary.unmappedCount}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
