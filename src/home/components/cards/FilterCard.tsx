@@ -5,10 +5,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, X } from "lucide-react";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
 import type { Category } from "@/types";
 
@@ -28,18 +26,18 @@ export const FilterCard = ({ value, onChange, categories = [] }: Props) => {
   const setMany = (patch: Partial<MovementsFilters>) =>
     onChange({ ...value, ...patch });
 
-  const reset = () =>
-    onChange({
-      q: "",
-      type: "ALL",
-      status: "ALL",
-      categoryId: undefined,
-      subcategoryId: undefined,
-      subsubcategoryId: undefined,
-      dateFrom: undefined,
-      dateTo: undefined,
-      minAmount: undefined,
-    });
+  // const reset = () =>
+  //   onChange({
+  //     q: "",
+  //     type: "ALL",
+  //     status: "ALL",
+  //     categoryId: undefined,
+  //     subcategoryId: undefined,
+  //     subsubcategoryId: undefined,
+  //     dateFrom: undefined,
+  //     dateTo: undefined,
+  //     minAmount: undefined,
+  //   });
 
   const selectedCategory =
     categories.find((c) => c._id === value.categoryId) ?? null;
