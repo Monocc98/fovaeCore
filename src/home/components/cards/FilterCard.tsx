@@ -10,27 +10,43 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar, X } from "lucide-react";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
+import type { Category } from "@/types";
 
 interface Props {
   value: MovementsFilters;
   onChange: (next: MovementsFilters) => void;
+  categories?: Category[];
 }
 
-export const FilterCard = ({ value, onChange }: Props) => {
+export const FilterCard = ({ value, onChange, categories = [] }: Props) => {
+  const ALL_VALUE = "__ALL__";
   const set = <K extends keyof MovementsFilters>(
     k: K,
     v: MovementsFilters[K]
   ) => onChange({ ...value, [k]: v });
+
+  const setMany = (patch: Partial<MovementsFilters>) =>
+    onChange({ ...value, ...patch });
 
   const reset = () =>
     onChange({
       q: "",
       type: "ALL",
       status: "ALL",
+      categoryId: undefined,
+      subcategoryId: undefined,
+      subsubcategoryId: undefined,
       dateFrom: undefined,
       dateTo: undefined,
       minAmount: undefined,
     });
+
+  const selectedCategory =
+    categories.find((c) => c._id === value.categoryId) ?? null;
+  const subcategories = selectedCategory?.subcategories ?? [];
+  const selectedSubcategory =
+    subcategories.find((s) => s._id === value.subcategoryId) ?? null;
+  const subsubcategories = selectedSubcategory?.subsubcategories ?? [];
 
   return (
     <>
@@ -77,6 +93,87 @@ export const FilterCard = ({ value, onChange }: Props) => {
       </div>
 
       <div>
+        <Label htmlFor="category-filter" className="text-sm font-medium">
+          Categoria
+        </Label>
+        <Select
+          value={value.categoryId ?? ALL_VALUE}
+          onValueChange={(v) =>
+            setMany({
+              categoryId: v === ALL_VALUE ? undefined : v,
+              subcategoryId: undefined,
+              subsubcategoryId: undefined,
+            })
+          }
+        >
+          <SelectTrigger id="category-filter">
+            <SelectValue placeholder="Todas las categorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas las categorias</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat._id} value={cat._id}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="subcategory-filter" className="text-sm font-medium">
+          Subcategoria
+        </Label>
+        <Select
+          value={value.subcategoryId ?? ALL_VALUE}
+          onValueChange={(v) =>
+            setMany({
+              subcategoryId: v === ALL_VALUE ? undefined : v,
+              subsubcategoryId: undefined,
+            })
+          }
+          disabled={!value.categoryId}
+        >
+          <SelectTrigger id="subcategory-filter">
+            <SelectValue placeholder="Todas las subcategorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas las subcategorias</SelectItem>
+            {subcategories.map((sub) => (
+              <SelectItem key={sub._id} value={sub._id}>
+                {sub.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <Label htmlFor="subsubcategory-filter" className="text-sm font-medium">
+          Detalle
+        </Label>
+        <Select
+          value={value.subsubcategoryId ?? ALL_VALUE}
+          onValueChange={(v) =>
+            set("subsubcategoryId", v === ALL_VALUE ? undefined : v)
+          }
+          disabled={!value.subcategoryId}
+        >
+          <SelectTrigger id="subsubcategory-filter">
+            <SelectValue placeholder="Todos los detalles" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todos los detalles</SelectItem>
+            {subsubcategories.map((leaf) => (
+              <SelectItem key={leaf._id} value={leaf._id}>
+                {leaf.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {/* 
+      <div>
         <Label htmlFor="status-filter" className="text-sm font-medium">
           Estado
         </Label>
@@ -93,9 +190,9 @@ export const FilterCard = ({ value, onChange }: Props) => {
             <SelectItem value="pending">Pendiente</SelectItem>
           </SelectContent>
         </Select>
-      </div>
+      </div> */}
 
-      <div>
+      {/* <div>
         <Label htmlFor="amount-filter" className="text-sm font-medium">
           Monto mínimo
         </Label>
@@ -123,7 +220,7 @@ export const FilterCard = ({ value, onChange }: Props) => {
         <Button size="sm" variant="outline" onClick={reset}>
           <X className="h-4 w-4" />
         </Button>
-      </div>
+      </div> */}
     </>
   );
 };

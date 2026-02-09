@@ -13,6 +13,7 @@ import {
 import { DashboardConfig } from "@/home/components/DashboardConfig";
 import type { Account } from "@/types/account.interface";
 import type { Company } from "@/types/comany.interface";
+import type { Category } from "@/types";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -33,6 +34,7 @@ import { queryClient } from "@/lib/utils";
 import { PendingProcessesCard } from "../components/cards/PendingProcessCard";
 import { getBucketsSummaryAction, getBudgetVsActualAction } from "../actions/get-home.action";
 import { CategorySummaryTable } from "../components/cards/CategorySummary";
+import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
 
 type Level = "groups" | "companies" | "accounts";
 type Tab = {
@@ -70,6 +72,9 @@ export const BrowsePage = () => {
     q: "",
     type: "ALL",
     status: "ALL",
+    categoryId: undefined,
+    subcategoryId: undefined,
+    subsubcategoryId: undefined,
     dateFrom: undefined,
     dateTo: undefined,
     minAmount: undefined,
@@ -88,6 +93,16 @@ export const BrowsePage = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", companyId],
+    queryFn: () => getCategoriesOverloadAction(companyId!),
+    enabled: !!companyId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const categories = categoriesQuery.data?.company?.categories ?? [];
 
   // ⬇️ NUEVO: estado para el modal de importación
   const [isImportOpen, setIsImportOpen] = useState(false);
@@ -360,11 +375,12 @@ export const BrowsePage = () => {
                   ) : (
                     // Solo monta el tab ACTIVO para no disparar varias queries
                     g.id === activeId && (
-                      <AccountsSection
-                        accountId={g.id}
-                        filters={filters}
-                        onChangeFilters={setFilters}
-                      />
+                        <AccountsSection
+                          accountId={g.id}
+                          filters={filters}
+                          onChangeFilters={setFilters}
+                          categories={categories}
+                        />
                     )
                   )}
                 </div>
@@ -389,7 +405,11 @@ export const BrowsePage = () => {
                         title="Filtros"
                         icon={<Filter className="w-5 h-5 text-gray-400" />}
                       >
-                        <FilterCard value={filters} onChange={setFilters} />
+                        <FilterCard
+                          value={filters}
+                          onChange={setFilters}
+                          categories={categories}
+                        />
                       </InfoCard>
                       <InfoCard
                         title="Procesos Pendientes"
@@ -448,10 +468,12 @@ function AccountsSection({
   accountId,
   filters,
   onChangeFilters,
+  categories,
 }: {
   accountId: string;
   filters: MovementsFilters;
   onChangeFilters: (f: MovementsFilters) => void;
+  categories: Category[];
 }) {
   const { data } = useQuery({
     queryKey: ["movementsOverlay", accountId],
@@ -470,6 +492,7 @@ function AccountsSection({
         filters={filters}
         onChangeFilters={onChangeFilters}
         accountId={accountId}
+        categories={categories}
       />
     </div>
   );

@@ -6,10 +6,10 @@ import {
   getMovementByIdAction,
   updateMovementAction,
 } from "../actions/movements.actions";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
-import { formatDate, getStatusBadge, getTransactionColor } from "@/helpers";
+import { formatCurrency, formatDate, getTransactionColor } from "@/helpers";
 import type { CategoriesResponse, Category } from "../../types";
 
 type FormValues = {
@@ -33,8 +33,8 @@ export const MovementsUpsertPage = () => {
   const mode: "edit" | "create" | "invalid" = idMovement
     ? "edit"
     : idAccount
-    ? "create"
-    : "invalid";
+      ? "create"
+      : "invalid";
 
   const isEditing = mode === "edit";
   const navigate = useNavigate();
@@ -264,9 +264,43 @@ export const MovementsUpsertPage = () => {
   const parentCat = parentCategories.find((c) => c._id === categoryId);
   const isExpense = parentCat?.type === "EXPENSE";
 
+  const [amountInput, setAmountInput] = useState("");
+  const [isAmountFocused, setIsAmountFocused] = useState(false);
+
   const previewAmount = isExpense
     ? -Math.abs(Number(watchedAmount) || 0)
     : Math.abs(Number(watchedAmount) || 0);
+
+  const normalizeAmountInput = (value: string) => {
+    const cleaned = value.replace(/[^\d.-]/g, "");
+    const normalized = cleaned.replace(/(?!^)-/g, "");
+    const parts = normalized.split(".");
+    if (parts.length > 2) {
+      return `${parts[0]}.${parts.slice(1).join("")}`;
+    }
+    return normalized;
+  };
+
+  const amountReg = register("amount", {
+    required: true,
+    onChange: (e) => {
+      const next = normalizeAmountInput(e.target.value);
+      setAmountInput(next);
+      const numeric = Math.abs(Number(next) || 0);
+      setValue("amount", numeric, { shouldDirty: true });
+    },
+    onBlur: () => {
+      setIsAmountFocused(false);
+      const numeric = Math.abs(Number(watchedAmount) || 0);
+      setAmountInput(numeric ? formatCurrency(numeric) : "");
+    },
+  });
+
+  useEffect(() => {
+    if (isAmountFocused) return;
+    const numeric = Math.abs(Number(watchedAmount) || 0);
+    setAmountInput(numeric ? formatCurrency(numeric) : "");
+  }, [watchedAmount, isAmountFocused]);
 
   return (
     /* Movement Form */
@@ -461,27 +495,27 @@ export const MovementsUpsertPage = () => {
                 {(categoryId ||
                   subcategoryId ||
                   watch("subsubcategory" as any)) && (
-                  <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
-                    <span className="font-medium">Ruta: </span>
-                    {parentCategories.find((c) => c._id === categoryId)?.name}
-                    {subcategoryId &&
-                      " → " +
+                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                      <span className="font-medium">Ruta: </span>
+                      {parentCategories.find((c) => c._id === categoryId)?.name}
+                      {subcategoryId &&
+                        " → " +
                         subcategories.find((s) => s._id === subcategoryId)
                           ?.name}
-                    {watch("subsubcategory" as any) &&
-                      " → " +
+                      {watch("subsubcategory" as any) &&
+                        " → " +
                         subsubcategories.find(
                           (l) => l._id === watch("subsubcategory" as any)
                         )?.name}
-                  </div>
-                )}
+                    </div>
+                  )}
               </div>
             </div>
 
-            {/* Amount and Status */}
+            {/* Amount */}
             <div className="bg-gray-50 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Monto y Estado
+                Monto
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -493,11 +527,17 @@ export const MovementsUpsertPage = () => {
                       $
                     </span>
                     <input
-                      type="number"
-                      step="0.01"
-                      {...register("amount", {
-                        required: true,
-                      })}
+                      type="text"
+                      inputMode="decimal"
+                      autoComplete="off"
+                      value={amountInput}
+                      onFocus={() => {
+                        setIsAmountFocused(true);
+                        const numeric = Math.abs(Number(watchedAmount) || 0);
+                        setAmountInput(numeric ? String(numeric) : "");
+                      }}
+                      onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
+                      {...amountReg}
                       className={cn(
                         "w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
                         {
@@ -512,7 +552,7 @@ export const MovementsUpsertPage = () => {
                     )}
                   </div>
                 </div>
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Estado
                   </label>
@@ -531,7 +571,7 @@ export const MovementsUpsertPage = () => {
                     <option value="completed">Completado</option>
                     <option value="cancelled">Cancelado</option>
                   </select>
-                </div>
+                </div> */}
               </div>
             </div>
           </div>
@@ -560,10 +600,10 @@ export const MovementsUpsertPage = () => {
                     {previewAmount ? `$${previewAmount}` : "0"}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                {/* <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Estado:</span>
                   <div>{getStatusBadge("completed")}</div>
-                </div>
+                </div> */}
               </div>
             </div>
 
@@ -608,12 +648,12 @@ export const MovementsUpsertPage = () => {
                       {recordedAtDate ? formatDate(recordedAtDate) : "—"}
                     </span>
                   </div>
-                  <div className="flex items-center space-x-3">
+                  {/* <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                     <span className="text-sm text-gray-600">
                       Estado: {"pending"}
                     </span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             )}

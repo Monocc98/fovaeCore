@@ -21,18 +21,21 @@ import type { MovementsFilters } from "@/types/movements-filters.interface";
 import { useAuthStore } from "@/auth/store/auth.store";
 import { getAccountPermission } from "@/auth/helpers/getAccountPermission.helper";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type { Category } from "@/types";
 
 interface Props {
   movements?: Movement[];
   filters: MovementsFilters;
   onChangeFilters: (next: MovementsFilters) => void;
   accountId?: string;
+  categories?: Category[];
 }
 
 export const MovementsTableCard = ({
   movements = [],
   filters,
   onChangeFilters,
+  categories = [],
 }: Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
@@ -132,6 +135,64 @@ export const MovementsTableCard = ({
       );
     }
 
+    if (
+      filters.categoryId ||
+      filters.subcategoryId ||
+      filters.subsubcategoryId
+    ) {
+      const categoryIndex = new Map<
+        string,
+        { categoryId?: string; subcategoryId?: string }
+      >();
+
+      categories.forEach((cat) => {
+        cat.subcategories?.forEach((sub) => {
+          sub.subsubcategories?.forEach((leaf) => {
+            categoryIndex.set(leaf._id, {
+              categoryId: cat._id,
+              subcategoryId: sub._id,
+            });
+          });
+        });
+      });
+
+      rows = rows.filter((m) => {
+        const leafId =
+          (m.subsubcategory as any)?._id ??
+          (m.subsubcategory as any)?.id ??
+          (m as any).subsubcategoryId ??
+          (m as any).subsubcategory ??
+          "";
+
+        if (!leafId) return false;
+
+        const indexed = categoryIndex.get(leafId);
+        const subcategoryId =
+          indexed?.subcategoryId ??
+          (m.subsubcategory as any)?.parent?._id ??
+          (m.subsubcategory as any)?.parent?.id ??
+          (m.subsubcategory as any)?.parent ??
+          "";
+        const categoryId =
+          indexed?.categoryId ??
+          (m.subsubcategory as any)?.parent?.parent?._id ??
+          (m.subsubcategory as any)?.parent?.parent?.id ??
+          (m.subsubcategory as any)?.parent?.parent ??
+          "";
+
+        if (filters.subsubcategoryId) {
+          return leafId === filters.subsubcategoryId;
+        }
+        if (filters.subcategoryId) {
+          return subcategoryId === filters.subcategoryId;
+        }
+        if (filters.categoryId) {
+          return categoryId === filters.categoryId;
+        }
+        return true;
+      });
+    }
+
     const from = filters.dateFrom
       ? new Date(filters.dateFrom + "T00:00:00")
       : undefined;
@@ -153,7 +214,7 @@ export const MovementsTableCard = ({
     });
 
     return rows;
-  }, [movements, q, filters, sortDir]);
+  }, [movements, q, filters, sortDir, categories]);
 
   // ✅ 2) virtualizer ya ve parentRef correctamente
   const rowVirtualizer = useVirtualizer({
