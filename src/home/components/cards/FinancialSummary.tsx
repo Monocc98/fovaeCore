@@ -17,7 +17,6 @@ export const FinancialSummary = ({
   income = 0,
   expenses = 0,
 }: Props) => {
-  console.log(balance, income, expenses);
 
   return (
     <div className="space-y-4">

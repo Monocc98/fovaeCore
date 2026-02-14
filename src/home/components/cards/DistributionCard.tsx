@@ -9,7 +9,6 @@ interface Props {
 const COLORS = ["#10b981", "#ef4444"];
 
 export const DistributionCard = ({ income, expenses }: Props) => {
-  console.log(income, expenses);
 
   const total = income + expenses;
 

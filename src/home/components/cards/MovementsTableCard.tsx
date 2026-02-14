@@ -8,7 +8,14 @@ import {
 import { deleteMovementAction } from "@/home/actions/movements.actions";
 import type { Movement } from "@/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Edit, ListPlus, Search, Trash2 } from "lucide-react";
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  Edit,
+  ListPlus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { useDeferredValue, useMemo, useRef, useState } from "react";
 import {
   useLocation,
@@ -82,14 +89,14 @@ export const MovementsTableCard = ({
 
       const next = prev?.movements
         ? {
-            ...prev,
-            movements: prev.movements.filter(
-              (m: any) => (m.id ?? m._id) !== id
-            ),
-          }
+          ...prev,
+          movements: prev.movements.filter(
+            (m: any) => (m.id ?? m._id) !== id
+          ),
+        }
         : Array.isArray(prev)
-        ? prev.filter((m: any) => (m.id ?? m._id) !== id)
-        : prev;
+          ? prev.filter((m: any) => (m.id ?? m._id) !== id)
+          : prev;
 
       queryClient.setQueryData(["movementsOverlay", accountId], next);
 
@@ -215,6 +222,23 @@ export const MovementsTableCard = ({
 
     return rows;
   }, [movements, q, filters, sortDir, categories]);
+
+  const summary = useMemo(() => {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+
+    filteredMovements.forEach((m) => {
+      if (m.amount >= 0) totalIncome += m.amount;
+      else totalExpenses += Math.abs(m.amount);
+    });
+
+    return {
+      totalIncome,
+      totalExpenses,
+      total: totalIncome - totalExpenses,
+      count: filteredMovements.length,
+    };
+  }, [filteredMovements]);
 
   // ✅ 2) virtualizer ya ve parentRef correctamente
   const rowVirtualizer = useVirtualizer({
@@ -443,6 +467,67 @@ export const MovementsTableCard = ({
                 )}
               </tbody>
             </table>
+          </div>
+          <div className="bg-linear-to-r from-gray-50 to-gray-100 border-t-2 border-gray-300 px-6 py-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Total Ingresos
+                </p>
+                <div className="flex items-center gap-2">
+                  <ArrowDownLeft className="w-4 h-4 text-green-500" />
+                  <p className="text-lg font-bold text-green-600">
+                    +
+                    {summary.totalIncome.toLocaleString("es-ES", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Total Egresos
+                </p>
+                <div className="flex items-center gap-2">
+                  <ArrowUpRight className="w-4 h-4 text-red-500" />
+                  <p className="text-lg font-bold text-red-600">
+                    -
+                    {summary.totalExpenses.toLocaleString("es-ES", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Balance
+                </p>
+                <p
+                  className={`text-lg font-bold ${summary.total >= 0 ? "text-green-600" : "text-red-600"
+                    }`}
+                >
+                  {summary.total >= 0 ? "+" : ""}
+                  {summary.total.toLocaleString("es-ES", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Movimientos
+                </p>
+                <p className="text-lg font-bold text-gray-900">
+                  {summary.count}{" "}
+                  {summary.count === 1 ? "movimiento" : "movimientos"}
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
