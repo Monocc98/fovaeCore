@@ -1,5 +1,5 @@
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
-import { BrowsePage, MovementsUpsertPage } from "@/home/pages";
+import { BrowsePage, MovementsUpsertPage, TransfersUpsertPage } from "@/home/pages";
 import { HomeLayoutV2, ContainerLayout } from "@/home/layouts";
 import { createBrowserRouter } from "react-router";
 import { BudgetPage } from "@/budget/pages/BudgetPage";
@@ -64,6 +64,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: "movement/new/:idAccount",
                 element: <MovementsUpsertPage />,
+              },
+              {
+                path: "transfer/new/:idAccount",
+                element: <TransfersUpsertPage />,
               },
             ],
           },

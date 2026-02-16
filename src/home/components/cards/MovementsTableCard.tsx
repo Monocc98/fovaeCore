@@ -16,6 +16,12 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useDeferredValue, useMemo, useRef, useState } from "react";
 import {
   useLocation,
@@ -70,6 +76,23 @@ export const MovementsTableCard = ({
       .normalize("NFD")
       .replace(/\p{Diacritic}/gu, "")
       .trim();
+
+  const getOccurredOn = (movement: any): string => {
+    const occurredOn = String(movement?.occurredOn ?? "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(occurredOn)) return occurredOn;
+
+    const raw = movement?.occurredAt;
+    if (!raw) return "";
+    const asString = String(raw);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(asString)) return asString;
+
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "";
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
 
   const queryClient = useQueryClient();
 
@@ -200,24 +223,23 @@ export const MovementsTableCard = ({
       });
     }
 
-    const from = filters.dateFrom
-      ? new Date(filters.dateFrom + "T00:00:00")
-      : undefined;
-    const to = filters.dateTo
-      ? new Date(filters.dateTo + "T23:59:59")
-      : undefined;
+    const from = filters.dateFrom;
+    const to = filters.dateTo;
 
-    if (from) rows = rows.filter((m) => new Date(m.occurredAt) >= from);
-    if (to) rows = rows.filter((m) => new Date(m.occurredAt) <= to);
+    if (from) rows = rows.filter((m) => getOccurredOn(m) >= from);
+    if (to) rows = rows.filter((m) => getOccurredOn(m) <= to);
 
     if (typeof filters.minAmount === "number") {
       rows = rows.filter((m) => Math.abs(m.amount) >= filters.minAmount!);
     }
 
     rows.sort((a, b) => {
-      const da = new Date(a.occurredAt).getTime();
-      const db = new Date(b.occurredAt).getTime();
-      return sortDir === "asc" ? da - db : db - da;
+      const da = getOccurredOn(a);
+      const db = getOccurredOn(b);
+      if (!da && !db) return 0;
+      if (!da) return sortDir === "asc" ? -1 : 1;
+      if (!db) return sortDir === "asc" ? 1 : -1;
+      return sortDir === "asc" ? da.localeCompare(db) : db.localeCompare(da);
     });
 
     return rows;
@@ -240,6 +262,12 @@ export const MovementsTableCard = ({
     };
   }, [filteredMovements]);
 
+  const formatSummaryAmount = (value: number) =>
+    value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
   // ✅ 2) virtualizer ya ve parentRef correctamente
   const rowVirtualizer = useVirtualizer({
     count: filteredMovements.length,
@@ -253,6 +281,13 @@ export const MovementsTableCard = ({
   const handleNewMovimiento = () => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/movement/new/${idAccount}`, {
+      state: { state: { backTo } },
+    });
+  };
+
+  const handleNewTransfer = () => {
+    const backTo = location.pathname + location.search;
+    navigate(`/company/${companyId}/transfer/new/${idAccount}`, {
       state: { state: { backTo } },
     });
   };
@@ -304,10 +339,24 @@ export const MovementsTableCard = ({
               </div>
 
               {canEditThisAccount && (
-                <ListPlus
-                  className="w-5 h-5 text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
-                  onClick={handleNewMovimiento}
-                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
+                    >
+                      <ListPlus className="w-5 h-5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={handleNewMovimiento}>
+                      Movimiento
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleNewTransfer}>
+                      Transferencia
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </CardTitle>
@@ -372,6 +421,23 @@ export const MovementsTableCard = ({
                       >
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                           const movement = filteredMovements[virtualRow.index];
+                          const transferRef =
+                            movement.transferId ??
+                            (movement as any).transferId ??
+                            (movement as any).transfer_id ??
+                            (movement as any).transfer ??
+                            (movement as any).transferMovement;
+                          const isTransfer =
+                            transferRef !== undefined &&
+                            transferRef !== null &&
+                            String(transferRef).trim() !== "";
+                          const detailLabel =
+                            movement.subsubcategory?.name ??
+                            (isTransfer
+                              ? movement.amount < 0
+                                ? "Salida por transferencia"
+                                : "Entrada por transferencia"
+                              : "Sin categoría");
 
                           return (
                             <div
@@ -391,7 +457,7 @@ export const MovementsTableCard = ({
                                     <td
                                       className={`px-4 py-4 whitespace-nowrap text-sm text-gray-900 ${COL_DATE}`}
                                     >
-                                      {formatDate(movement.occurredAt)}
+                                      {formatDate(getOccurredOn(movement) || movement.occurredAt)}
                                     </td>
 
                                     <td
@@ -401,7 +467,7 @@ export const MovementsTableCard = ({
                                         <span className="shrink-0 w-5 h-5 flex items-center justify-center">
                                           {getTransactionIcon(
                                             movement.amount,
-                                            movement.transferId
+                                            transferRef
                                           )}
                                         </span>
                                         <div className="min-w-0">
@@ -409,7 +475,7 @@ export const MovementsTableCard = ({
                                             {movement.description}
                                           </div>
                                           <div className="text-xs text-gray-500 truncate">
-                                            {movement.subsubcategory.name}
+                                            {detailLabel}
                                           </div>
                                         </div>
                                       </div>
@@ -421,7 +487,7 @@ export const MovementsTableCard = ({
                                       <span
                                         className={getTransactionColor(
                                           movement.amount,
-                                          movement.transferId
+                                          transferRef
                                         )}
                                       >
                                         {formatCurrency(movement.amount)}
@@ -478,10 +544,7 @@ export const MovementsTableCard = ({
                   <ArrowDownLeft className="w-4 h-4 text-green-500" />
                   <p className="text-lg font-bold text-green-600">
                     +
-                    {summary.totalIncome.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatSummaryAmount(summary.totalIncome)}
                   </p>
                 </div>
               </div>
@@ -494,10 +557,7 @@ export const MovementsTableCard = ({
                   <ArrowUpRight className="w-4 h-4 text-red-500" />
                   <p className="text-lg font-bold text-red-600">
                     -
-                    {summary.totalExpenses.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
+                    {formatSummaryAmount(summary.totalExpenses)}
                   </p>
                 </div>
               </div>
@@ -511,10 +571,7 @@ export const MovementsTableCard = ({
                     }`}
                 >
                   {summary.total >= 0 ? "+" : ""}
-                  {summary.total.toLocaleString("es-ES", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  {formatSummaryAmount(summary.total)}
                 </p>
               </div>
 
