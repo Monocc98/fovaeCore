@@ -11,6 +11,8 @@ export interface ImportMovementsResponse {
   accountId: string;
   source: "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR" | string;
   totalRows: number;
+  detectedSections?: string[];
+  transferCandidatesCount?: number;
   concepts: Array<{
     externalConceptKey: string;
     externalCategoryRaw: string;
@@ -24,6 +26,7 @@ export type ImportSource = "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR";
 export interface ConfirmImportResponse {
   message: string;
   insertedCount: number;
+  transferCreatedCount?: number;
 }
 
 export type ImportBatchStatus = "PENDING" | "PROCESSED" | "FAILED" | "PROCESSING";
@@ -121,11 +124,17 @@ export const getImportBatchSummaryAction = async (
 
 export const importSolucionFactibleAction = async (
   accountId: string,
-  file: File
+  file: File,
+  opts?: {
+    investmentAccountId?: string;
+  }
 ): Promise<ImportMovementsResponse> => {
   const formData = new FormData();
   formData.append("file", file);          // nombre que espera Multer
   formData.append("accountId", accountId);
+  if (opts?.investmentAccountId) {
+    formData.append("investmentAccountId", opts.investmentAccountId);
+  }
 
   // OJO: ruta relativa a TU API, SIN /api si ya lo pone el baseURL
   const { data } = await fovaeCoreApi.post<ImportMovementsResponse>(

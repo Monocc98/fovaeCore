@@ -31,15 +31,26 @@ export const ImportDataModal = ({
   const [batchId, setBatchId] = useState<string>("");
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [totalRows, setTotalRows] = useState(0);
+  const [detectedSections, setDetectedSections] = useState<string[]>([]);
+  const [transferCandidatesCount, setTransferCandidatesCount] = useState(0);
+  const [sectionAccountMap, setSectionAccountMap] = useState<Record<string, string>>({});
 
   const handleFileProcessed = (
     newBatchId: string,
     newConcepts: Concept[],
-    rows: number
+    rows: number,
+    meta?: {
+      detectedSections?: string[];
+      transferCandidatesCount?: number;
+      sectionAccountMap?: Record<string, string>;
+    }
   ) => {
     setBatchId(newBatchId);
     setConcepts(newConcepts);
     setTotalRows(rows);
+    setDetectedSections(meta?.detectedSections ?? []);
+    setTransferCandidatesCount(meta?.transferCandidatesCount ?? 0);
+    setSectionAccountMap(meta?.sectionAccountMap ?? {});
     setStep("mapping");
   };
 
@@ -48,6 +59,9 @@ export const ImportDataModal = ({
     setBatchId("");
     setConcepts([]);
     setTotalRows(0);
+    setDetectedSections([]);
+    setTransferCandidatesCount(0);
+    setSectionAccountMap({});
   };
 
   const handleClose = () => {
@@ -55,6 +69,9 @@ export const ImportDataModal = ({
     setBatchId("");
     setConcepts([]);
     setTotalRows(0);
+    setDetectedSections([]);
+    setTransferCandidatesCount(0);
+    setSectionAccountMap({});
     onClose();
   };
 
@@ -84,6 +101,9 @@ export const ImportDataModal = ({
               batchId={batchId}
               concepts={concepts}
               totalRows={totalRows}
+              detectedSections={detectedSections}
+              transferCandidatesCount={transferCandidatesCount}
+              initialSectionAccountMap={sectionAccountMap}
               onBack={handleBack}
               onSuccess={handleSuccess}
             />

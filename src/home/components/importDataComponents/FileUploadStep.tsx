@@ -4,6 +4,9 @@ import {
   importSolucionFactibleAction,
   importServoEscolarAction,
 } from "@/home/actions/movements.actions";
+import { useQuery } from "@tanstack/react-query";
+import { getAccountsAction } from "@/accounts/actions/acounts.actions";
+import { useParams } from "react-router";
 
 type ImportSource = "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR";
 
@@ -23,7 +26,12 @@ interface FileUploadStepProps {
   onFileProcessed: (
     batchId: string,
     concepts: Concept[],
-    totalRows: number
+    totalRows: number,
+    meta?: {
+      detectedSections?: string[];
+      transferCandidatesCount?: number;
+      sectionAccountMap?: Record<string, string>;
+    }
   ) => void;
   onCancel: () => void;
 }
@@ -38,7 +46,22 @@ export const FileUploadStep = ({
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [investmentAccountId, setInvestmentAccountId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { companyId } = useParams<{ companyId?: string }>();
+
+  const accountsQuery = useQuery({
+    queryKey: ["accounts", companyId],
+    queryFn: () => getAccountsAction(companyId!),
+    enabled: !!companyId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const companyAccounts = accountsQuery.data?.accounts ?? [];
+  const investmentCandidates = companyAccounts.filter(
+    (a) => a.id !== accountId
+  );
 
   const accept = source === "SOLUCION_FACTIBLE" ? ".csv" : ".xlsx,.xls";
 
@@ -84,6 +107,7 @@ export const FileUploadStep = ({
     setSource(next);
     setFile(null);
     setError(null);
+    setInvestmentAccountId("");
     if (fileInputRef.current) fileInputRef.current.value = ""; // reset input
   };
 
@@ -96,13 +120,22 @@ export const FileUploadStep = ({
     try {
       const data =
         source === "SOLUCION_FACTIBLE"
-          ? await importSolucionFactibleAction(accountId, file)
+          ? await importSolucionFactibleAction(accountId, file, {
+            investmentAccountId: investmentAccountId || undefined,
+          })
           : await importServoEscolarAction(accountId, file);
 
       onFileProcessed(
         data.importBatchId,
         data.concepts as Concept[],
-        data.totalRows
+        data.totalRows,
+        {
+          detectedSections: data.detectedSections ?? [],
+          transferCandidatesCount: data.transferCandidatesCount ?? 0,
+          sectionAccountMap: investmentAccountId
+            ? { INVERSION: investmentAccountId }
+            : {},
+        }
       );
     } catch (err: any) {
       console.error("Error processing file:", err);
@@ -169,6 +202,27 @@ export const FileUploadStep = ({
             </div>
           </div>
         </div>
+
+        {source === "SOLUCION_FACTIBLE" && (
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg text-left border border-blue-200">
+            <p className="text-xs text-blue-700 mb-2">
+              Cuenta para sección de inversión (opcional)
+            </p>
+            <select
+              value={investmentAccountId}
+              onChange={(e) => setInvestmentAccountId(e.target.value)}
+              className="w-full px-3 py-2 border border-blue-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+              disabled={accountsQuery.isLoading}
+            >
+              <option value="">No asignar cuenta de inversión</option>
+              {investmentCandidates.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* BODY SCROLL */}
@@ -204,7 +258,7 @@ export const FileUploadStep = ({
 
         {error && (
           <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
             <p className="text-sm text-red-700">{error}</p>
           </div>
         )}
