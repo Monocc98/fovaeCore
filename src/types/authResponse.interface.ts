@@ -21,8 +21,13 @@ export type Permissions = {
     companyPermissions: CompanyPermission[];
 };
 
+export type CsrfPayload = {
+    headerName: string;
+    token: string;
+};
+
 export interface AuthResponse {
     user:  User;
-    token: string;
     permissions: Permissions;
+    csrf?: CsrfPayload;
 }

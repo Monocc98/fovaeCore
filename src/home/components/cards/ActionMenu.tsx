@@ -2,6 +2,7 @@ import { AdminCategoriesButton } from "../actionMenu/AdminCategoriesButton";
 import { BudgetButton } from "../actionMenu/BudgetButton";
 import { AdminAccountsButton } from "../actionMenu/AdminAccountsButton";
 import { ImportDataButton } from "../actionMenu/ImportDataButton";
+import { GraphDropdownButton } from "../actionMenu/GraphDropdownButton";
 
 interface Props {
   mode?: "groups" | "companies" | "accounts";
@@ -17,7 +18,14 @@ export const ActionMenu = ({ mode, onImportDataClick }: Props) => {
         </>
       ) : mode === "companies" ? (
         <>
-          <AdminAccountsButton /> <BudgetButton /> <AdminCategoriesButton />
+          <GraphDropdownButton />
+          <AdminAccountsButton />
+          <BudgetButton />
+          <AdminCategoriesButton />
+        </>
+      ) : mode === "groups" ? (
+        <>
+          <GraphDropdownButton />
         </>
       ) : null}
     </div>

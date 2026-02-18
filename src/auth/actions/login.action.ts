@@ -1,23 +1,15 @@
-import { fovaeCoreApi } from "@/api/fovaeCore.api"
+import { applyCsrfFromAuth, fovaeCoreApi } from "@/api/fovaeCore.api";
 import type { AuthResponse } from "@/types";
 
-export const loginAction = async( email: string, password: string): Promise<AuthResponse> => {
+export const loginAction = async (
+  email: string,
+  password: string
+): Promise<AuthResponse> => {
+  const { data } = await fovaeCoreApi.post<AuthResponse>("/auth/login", {
+    email,
+    password,
+  });
 
-    try {
-        
-        const { data } = await fovaeCoreApi.post<AuthResponse>('/auth/login', {
-            email,
-            password
-        })
-
-        console.log(data);
-
-        return data;
-        
-
-    } catch (error) {
-        console.log(error);
-        throw error;
-    }
-
-}
+  applyCsrfFromAuth(data.csrf);
+  return data;
+};

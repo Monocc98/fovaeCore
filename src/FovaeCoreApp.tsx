@@ -3,13 +3,24 @@ import { appRouter } from "./router/app.router";
 import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { Toaster } from "sonner";
-import { type PropsWithChildren } from "react";
+import { useEffect, type PropsWithChildren } from "react";
 import { CustomFullscreenLoading } from "./components/custom/CustomFullscreenLoading";
 import { useAuthStore } from "./auth/store/auth.store";
 import { queryClient } from "@/lib/utils";
 
 const CheckAuthProvider = ({ children }: PropsWithChildren) => {
-  const { checkAuthStatus, authStatus } = useAuthStore();
+  const { checkAuthStatus, authStatus, invalidateSession } = useAuthStore();
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      invalidateSession();
+    };
+
+    window.addEventListener("fovae:auth-unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("fovae:auth-unauthorized", handleUnauthorized);
+    };
+  }, [invalidateSession]);
 
   const { isLoading } = useQuery({
     queryKey: ["auth-check"], // ✅ como antes
