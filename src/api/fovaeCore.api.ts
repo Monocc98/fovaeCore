@@ -10,10 +10,39 @@ const CSRF_COOKIE_FALLBACK =
   import.meta.env.VITE_CSRF_COOKIE_NAME ?? "csrf";
 const MUTABLE_METHODS = new Set(["post", "put", "patch", "delete"]);
 const AUTH_ROUTES = ["/auth/login", "/auth/register", "/auth/renew", "/auth/logout"];
+const CSRF_STORAGE_KEY = "fovae:csrf";
 
 const csrfState = {
   headerName: CSRF_HEADER_FALLBACK,
   token: "",
+};
+
+const readPersistedCsrf = (): Partial<CsrfPayload> | null => {
+  try {
+    const raw = sessionStorage.getItem(CSRF_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<CsrfPayload>;
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+const persistCsrf = (headerName: string, token: string): void => {
+  try {
+    sessionStorage.setItem(CSRF_STORAGE_KEY, JSON.stringify({ headerName, token }));
+  } catch {
+    // ignore storage failures (private mode/quota)
+  }
+};
+
+const clearPersistedCsrf = (): void => {
+  try {
+    sessionStorage.removeItem(CSRF_STORAGE_KEY);
+  } catch {
+    // ignore storage failures
+  }
 };
 
 type RetriableRequestConfig = AxiosRequestConfig & {
@@ -31,6 +60,13 @@ const readCookie = (cookieName: string): string => {
 const resolveCsrfToken = (): string => {
   if (csrfState.token) return csrfState.token;
 
+  const persisted = readPersistedCsrf();
+  if (persisted?.token) {
+    csrfState.token = persisted.token;
+    csrfState.headerName = persisted.headerName || csrfState.headerName;
+    return csrfState.token;
+  }
+
   const configuredToken = readCookie(CSRF_COOKIE_FALLBACK);
   if (configuredToken) return configuredToken;
 
@@ -47,11 +83,13 @@ export const applyCsrfFromAuth = (csrf?: CsrfPayload): void => {
   if (!csrf) return;
   csrfState.headerName = csrf.headerName || CSRF_HEADER_FALLBACK;
   csrfState.token = csrf.token || "";
+  if (csrfState.token) persistCsrf(csrfState.headerName, csrfState.token);
 };
 
 export const clearCsrfState = (): void => {
   csrfState.token = "";
   csrfState.headerName = CSRF_HEADER_FALLBACK;
+  clearPersistedCsrf();
 };
 
 const addCsrfHeader = <T extends AxiosRequestConfig>(config: T): T => {
