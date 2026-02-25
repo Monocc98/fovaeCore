@@ -1,5 +1,10 @@
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
-import { BrowsePage, MovementsUpsertPage, TransfersUpsertPage } from "@/home/pages";
+import {
+  BrowsePage,
+  ExpenseBudgetObjectivePage,
+  MovementsUpsertPage,
+  TransfersUpsertPage,
+} from "@/home/pages";
 import { HomeLayoutV2, ContainerLayout } from "@/home/layouts";
 import { createBrowserRouter } from "react-router";
 import { BudgetPage } from "@/budget/pages/BudgetPage";
@@ -49,6 +54,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: "categories/:companyId",
                 element: <CategoriesPage />,
+              },
+              {
+                path: "objective-graph/:companyId",
+                element: <ExpenseBudgetObjectivePage />,
               },
             ],
           },

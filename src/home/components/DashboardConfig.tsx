@@ -7,18 +7,22 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useParams, useSearchParams } from "react-router";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useFiscalYears } from "@/budget/hooks/useFiscalYears";
 
 export const DashboardConfig = () => {
-  const { companyId } = useParams<{
-    // groupId?: string;
+  const navigate = useNavigate();
+  const { groupId, companyId } = useParams<{
+    groupId?: string;
     companyId?: string;
   }>();
 
   const [searchParams] = useSearchParams();
 
   const companyIdParam = searchParams.get("c") ?? undefined;
+  const showBackButton = Boolean(groupId || companyId);
 
   const {
     fiscalYears,
@@ -30,8 +34,20 @@ export const DashboardConfig = () => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
       <div className="flex items-center justify-between mb-4">
-        {/* <CustomBreadcrumb items={breadcrumbItems} /> */}
-        {/* Optional: Last updated info */}
+        {showBackButton ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-2 px-2 text-gray-600 hover:text-gray-900"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Regresar
+          </Button>
+        ) : (
+          <div />
+        )}
         <div className="text-xs text-gray-500">
           Última actualización: {new Date().toLocaleDateString("es-ES")}
         </div>

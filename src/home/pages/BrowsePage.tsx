@@ -475,7 +475,7 @@ function AccountsSection({
   onChangeFilters: (f: MovementsFilters) => void;
   categories: Category[];
 }) {
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["movementsOverlay", accountId],
     queryFn: () => getMovementsAction(accountId),
     enabled: !!accountId,
@@ -489,6 +489,7 @@ function AccountsSection({
     <div className="col-span-12 lg:col-span-6 space-y-6">
       <MovementsTableCard
         movements={movements}
+        isLoading={isLoading}
         filters={filters}
         onChangeFilters={onChangeFilters}
         accountId={accountId}

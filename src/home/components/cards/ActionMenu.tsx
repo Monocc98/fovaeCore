@@ -23,10 +23,6 @@ export const ActionMenu = ({ mode, onImportDataClick }: Props) => {
           <BudgetButton />
           <AdminCategoriesButton />
         </>
-      ) : mode === "groups" ? (
-        <>
-          <GraphDropdownButton />
-        </>
       ) : null}
     </div>
   );

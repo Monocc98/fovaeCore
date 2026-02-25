@@ -38,6 +38,7 @@ import type { Category } from "@/types";
 
 interface Props {
   movements?: Movement[];
+  isLoading?: boolean;
   filters: MovementsFilters;
   onChangeFilters: (next: MovementsFilters) => void;
   accountId?: string;
@@ -46,6 +47,7 @@ interface Props {
 
 export const MovementsTableCard = ({
   movements = [],
+  isLoading = false,
   filters,
   onChangeFilters,
   categories = [],
@@ -401,7 +403,27 @@ export const MovementsTableCard = ({
               </thead>
 
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredMovements.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, idx) => (
+                    <tr key={`skeleton-${idx}`} className="animate-pulse">
+                      <td className={`px-4 py-4 ${COL_DATE}`}>
+                        <div className="h-4 w-24 rounded bg-gray-200" />
+                      </td>
+                      <td className={`px-4 py-4 ${COL_DESC}`}>
+                        <div className="space-y-2">
+                          <div className="h-4 w-48 rounded bg-gray-200" />
+                          <div className="h-3 w-32 rounded bg-gray-100" />
+                        </div>
+                      </td>
+                      <td className={`px-4 py-4 ${COL_AMOUNT}`}>
+                        <div className="h-4 w-20 rounded bg-gray-200" />
+                      </td>
+                      <td className={`px-4 py-4 ${COL_ACTIONS}`}>
+                        <div className="h-4 w-12 rounded bg-gray-100" />
+                      </td>
+                    </tr>
+                  ))
+                ) : filteredMovements.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}
