@@ -1,6 +1,14 @@
 import { fovaeCoreApi } from "@/api/fovaeCore.api"
 import type { CategoriesResponse, Category, Subcategory, Subsubcategory } from "../../types";
 
+type ReorderLevel = "category" | "subcategory" | "subsubcategory";
+
+export interface ReorderCategoriesPayload {
+    level: ReorderLevel;
+    parentId: string;
+    orderedIds: string[];
+}
+
 export const getCategoriesOverloadAction = async(idCompany: string):Promise<CategoriesResponse> => {
     const { data } = await fovaeCoreApi.get<CategoriesResponse>(`/categories/${idCompany}`);
 
@@ -79,5 +87,11 @@ export const deleteSubcategoryAction = async(idSubcategory: string) => {
 export const deleteSubsubcategoryAction = async(idSubsubcategory: string) => {
     const { data } = await fovaeCoreApi.delete<Subsubcategory>(`categories/subsubcategories/${idSubsubcategory}`);
     
+    return data;
+}
+
+export const reorderCategoriesAction = async(payload: ReorderCategoriesPayload) => {
+    const { data } = await fovaeCoreApi.put("/categories/reorder", payload);
+
     return data;
 }

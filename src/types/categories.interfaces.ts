@@ -4,6 +4,7 @@ export interface Category {
     company:           string;
     type:              string,
     _id:               string;
+    sortIndex?:        number;
     subcategories?: Subcategory[];
 }
 
@@ -13,6 +14,7 @@ export interface Subcategory {
     scope:             string;
     parent:            string;
     company:           string;
+    sortIndex?:        number;
     subsubcategories?: Subsubcategory[];
 }
 
@@ -22,4 +24,5 @@ export interface Subsubcategory {
     scope:             string;
     parent:            string;
     company:           string;
+    sortIndex?:        number;
 }

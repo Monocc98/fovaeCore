@@ -1,7 +1,15 @@
-import { Edit, Plus, Search, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Edit,
+  GripVertical,
+  Plus,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { getLevelBadge } from "@/helpers";
 import { useForm } from "react-hook-form";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createCategoryAction,
@@ -11,6 +19,7 @@ import {
   deleteSubcategoryAction,
   deleteSubsubcategoryAction,
   getCategoriesOverloadAction,
+  reorderCategoriesAction,
   updateCategoryAction,
   updateSubcategoryAction,
   updateSubsubcategoryAction,
@@ -22,6 +31,7 @@ import type { CategoriesResponse, Category } from "@/types";
 
 type Level = "category" | "subcategory" | "subsubcategory";
 type Scope = "COMPANY" | "ACCOUNT";
+type RowLevel = "category" | "subcategory" | "subsubcategory";
 type DeletePayload = { id: string; level: RowLevel };
 
 interface CategoryFormValues {
@@ -33,24 +43,134 @@ interface CategoryFormValues {
   type?: string;
 }
 
-type RowLevel = "category" | "subcategory" | "subsubcategory";
 export type Row = {
   id: string;
   level: RowLevel;
   name: string;
   type?: string;
-  path: string; // "Cat → Subcat → Detalle"
+  path: string;
   scope: "COMPANY" | "ACCOUNT" | string;
+  sortIndex?: number;
   catId: string;
   subId?: string;
+};
+
+type TreeNode = {
+  row: Row;
+  children: TreeNode[];
+};
+
+type DragState = {
+  id: string;
+  parentId: string;
+  level: RowLevel;
+};
+
+const getTypeLabel = (type?: string) => {
+  if (type === "INCOME") return "Ingreso";
+  if (type === "EXPENSE") return "Egreso";
+  return null;
+};
+
+const sortBySortIndex = <T extends { sortIndex?: number; name: string }>(items: T[]) =>
+  [...items].sort((a, b) => {
+    const aIndex = a.sortIndex ?? Number.MAX_SAFE_INTEGER;
+    const bIndex = b.sortIndex ?? Number.MAX_SAFE_INTEGER;
+
+    if (aIndex !== bIndex) {
+      return aIndex - bIndex;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+
+const reorderSiblings = (
+  nodes: TreeNode[],
+  sourceId: string,
+  targetId: string
+) => {
+  const sourceIndex = nodes.findIndex((node) => node.row.id === sourceId);
+  const targetIndex = nodes.findIndex((node) => node.row.id === targetId);
+
+  if (
+    sourceIndex === -1 ||
+    targetIndex === -1 ||
+    sourceIndex === targetIndex
+  ) {
+    return nodes;
+  }
+
+  const nextNodes = [...nodes];
+  const [sourceNode] = nextNodes.splice(sourceIndex, 1);
+  nextNodes.splice(targetIndex, 0, sourceNode);
+
+  return nextNodes;
+};
+
+const reorderTreeByParent = (
+  nodes: TreeNode[],
+  parentId: string,
+  sourceId: string,
+  targetId: string
+): TreeNode[] => {
+  if (parentId === "root") {
+    return reorderSiblings(nodes, sourceId, targetId);
+  }
+
+  return nodes.map((node) => {
+    if (node.row.id === parentId) {
+      return {
+        ...node,
+        children: reorderSiblings(node.children, sourceId, targetId),
+      };
+    }
+
+    if (node.children.length === 0) {
+      return node;
+    }
+
+    return {
+      ...node,
+      children: reorderTreeByParent(node.children, parentId, sourceId, targetId),
+    };
+  });
+};
+
+const findSiblingIdsByParent = (nodes: TreeNode[], parentId: string): string[] => {
+  if (parentId === "root") {
+    return nodes.map((node) => node.row.id);
+  }
+
+  for (const node of nodes) {
+    if (node.row.id === parentId) {
+      return node.children.map((child) => child.row.id);
+    }
+
+    if (node.children.length > 0) {
+      const nestedIds = findSiblingIdsByParent(node.children, parentId);
+
+      if (nestedIds.length > 0) {
+        return nestedIds;
+      }
+    }
+  }
+
+  return [];
 };
 
 export const CategoriesPage = () => {
   const [categoryToDelete, setCategoryToDelete] = useState<Row | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [orderedTree, setOrderedTree] = useState<TreeNode[]>([]);
+  const [draggingNode, setDraggingNode] = useState<DragState | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [catFilter, setCatFilter] = useState<string>("");
+  const [subFilter, setSubFilter] = useState<string>("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
-
   const navigate = useNavigate();
   const location = useLocation();
   const { groupId, companyId } = useParams<{
@@ -60,8 +180,6 @@ export const CategoriesPage = () => {
 
   const backTo = (location.state as any)?.backTo as string | undefined;
 
-  const [editingId, setEditingId] = useState<string | null>(null);
-
   const categoriesQuery = useQuery<CategoriesResponse>({
     queryKey: ["categories", companyId],
     queryFn: () => getCategoriesOverloadAction(companyId!),
@@ -69,17 +187,10 @@ export const CategoriesPage = () => {
   });
 
   const companyName = categoriesQuery.data?.company?.name;
-
   const parentCategories: Category[] =
     categoriesQuery.data?.company?.categories ?? [];
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    // formState: { errors },
-  } = useForm<CategoryFormValues>({
+  const { register, handleSubmit, watch, reset } = useForm<CategoryFormValues>({
     defaultValues: {
       name: "",
       level: "category",
@@ -90,76 +201,82 @@ export const CategoriesPage = () => {
   });
 
   const level = watch("level");
-  // const scope = watch("scope");
 
-  const rows: Row[] = useMemo(() => {
-    const acc: Row[] = [];
-
-    for (const cat of parentCategories) {
-      // Nivel 1
-      acc.push({
+  const treeRows = useMemo<TreeNode[]>(() => {
+    return sortBySortIndex(parentCategories).map((cat) => ({
+      row: {
         id: cat._id,
         level: "category",
         name: cat.name,
         path: cat.name,
         scope: cat.scope,
+        sortIndex: cat.sortIndex,
         catId: cat._id,
         type: cat.type,
-      });
-
-      for (const sub of cat.subcategories ?? []) {
-        // Nivel 2
-        acc.push({
+      },
+      children: sortBySortIndex(cat.subcategories ?? []).map((sub) => ({
+        row: {
           id: sub._id,
           level: "subcategory",
           name: sub.name,
-          path: `${cat.name} → ${sub.name}`,
+          path: `${cat.name} -> ${sub.name}`,
           scope: sub.scope,
+          sortIndex: sub.sortIndex,
           catId: cat._id,
           subId: sub._id,
-        });
-
-        for (const leaf of sub.subsubcategories ?? []) {
-          // Nivel 3
-          acc.push({
+        },
+        children: sortBySortIndex(sub.subsubcategories ?? []).map((leaf) => ({
+          row: {
             id: leaf._id,
             level: "subsubcategory",
             name: leaf.name,
-            path: `${cat.name} → ${sub.name} → ${leaf.name}`,
+            path: `${cat.name} -> ${sub.name} -> ${leaf.name}`,
             scope: leaf.scope,
+            sortIndex: leaf.sortIndex,
             catId: cat._id,
             subId: sub._id,
-          });
+          },
+          children: [],
+        })),
+      })),
+    }));
+  }, [parentCategories]);
+
+  useEffect(() => {
+    setOrderedTree(treeRows);
+  }, [treeRows]);
+
+  useEffect(() => {
+    const nextExpanded = new Set<string>();
+
+    for (const node of treeRows) {
+      if (node.children.length > 0) {
+        nextExpanded.add(node.row.id);
+      }
+
+      for (const child of node.children) {
+        if (child.children.length > 0) {
+          nextExpanded.add(child.row.id);
         }
       }
     }
 
-    return acc;
-  }, [parentCategories]);
+    setExpandedNodes(nextExpanded);
+  }, [treeRows]);
 
   const parentOptions = useMemo(() => {
     if (level === "subcategory") {
-      // padre debe ser categoría (nivel 1)
       return parentCategories.map((c) => ({ id: c._id, name: c.name }));
     }
+
     if (level === "subsubcategory") {
-      // padre debe ser subcategoría (nivel 2)
       const subs = parentCategories.flatMap((c) => c.subcategories ?? []);
       return subs.map((s) => ({ id: s._id, name: s.name }));
     }
-    return []; // nivel category no requiere padre
+
+    return [];
   }, [level, parentCategories]);
 
-  // --- Filtros UI ---
-  const [searchTerm, setSearchTerm] = useState("");
-  // const [scopeFilter, setScopeFilter] = useState<"ALL" | "COMPANY" | "ACCOUNT">(
-  //   "ALL"
-  // );
-
-  const [catFilter, setCatFilter] = useState<string>(""); // categoría padre
-  const [subFilter, setSubFilter] = useState<string>(""); // subcategoría
-
-  // opciones de selects:
   const catOptions = useMemo(
     () => parentCategories.map((c) => ({ id: c._id, name: c.name })),
     [parentCategories]
@@ -171,34 +288,54 @@ export const CategoriesPage = () => {
     return (cat?.subcategories ?? []).map((s) => ({ id: s._id, name: s.name }));
   }, [catFilter, parentCategories]);
 
-  // al cambiar categoría, resetea subcategoría
-  const onChangeCatFilter = (v: string) => {
-    setCatFilter(v);
-    setSubFilter(""); // reset dependiente
+  const onChangeCatFilter = (value: string) => {
+    setCatFilter(value);
+    setSubFilter("");
   };
 
-  // --- Filtrado de filas para tabla ---
-  const filteredRows = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
+  const isFiltering = Boolean(searchTerm.trim() || catFilter || subFilter);
 
-    return rows.filter((r) => {
-      const matchText =
-        !q ||
-        r.name.toLowerCase().includes(q) ||
-        r.path.toLowerCase().includes(q) ||
-        (r.type?.toLowerCase().includes(q) ?? false);
+  const filteredTree = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
 
-      // const matchScope = scopeFilter === "ALL" || r.scope === scopeFilter;
-      const matchCat = !catFilter || r.catId === catFilter;
-      const matchSub = !subFilter || r.subId === subFilter;
+    const filterNode = (node: TreeNode): TreeNode | null => {
+      const matchesText =
+        !query ||
+        node.row.name.toLowerCase().includes(query) ||
+        node.row.path.toLowerCase().includes(query) ||
+        (node.row.type?.toLowerCase().includes(query) ?? false);
 
-      return matchText && matchCat && matchSub;
-    });
-  }, [rows, searchTerm, catFilter, subFilter]);
+      const matchesCat = !catFilter || node.row.catId === catFilter;
+      const matchesSub = !subFilter || node.row.subId === subFilter;
+      const children = node.children
+        .map((child) => filterNode(child))
+        .filter((child): child is TreeNode => child !== null);
+      const matchesSelf = matchesText && matchesCat && matchesSub;
+
+      if (matchesSelf || children.length > 0) {
+        return {
+          ...node,
+          children,
+        };
+      }
+
+      return null;
+    };
+
+    return orderedTree
+      .map((node) => filterNode(node))
+      .filter((node): node is TreeNode => node !== null);
+  }, [orderedTree, searchTerm, catFilter, subFilter]);
+
+  const visibleCount = useMemo(() => {
+    const countNodes = (nodes: TreeNode[]): number =>
+      nodes.reduce((total, node) => total + 1 + countNodes(node.children), 0);
+
+    return countNodes(filteredTree);
+  }, [filteredTree]);
 
   const createMut = useMutation({
     mutationFn: async (payload: CategoryFormValues) => {
-      // adapta el payload a tu backend si usa claves distintas
       if (payload.level === "category") {
         return createCategoryAction({
           name: payload.name,
@@ -206,24 +343,25 @@ export const CategoriesPage = () => {
           type: payload.type,
           company: companyId!,
         } as any);
-      } else if (payload.level === "subcategory") {
+      }
+
+      if (payload.level === "subcategory") {
         return createSubcategoryAction({
           name: payload.name,
           scope: payload.scope,
           parent: payload.parentId,
           company: companyId!,
         } as any);
-      } else if (payload.level === "subsubcategory") {
-        return createSubsubcategoryAction({
-          name: payload.name,
-          scope: payload.scope,
-          parent: payload.parentId,
-          company: companyId!,
-        } as any);
       }
+
+      return createSubsubcategoryAction({
+        name: payload.name,
+        scope: payload.scope,
+        parent: payload.parentId,
+        company: companyId!,
+      } as any);
     },
     onSuccess: () => {
-      // refresca las categorías
       queryClient.invalidateQueries({
         queryKey: ["categories", companyId],
       });
@@ -252,16 +390,15 @@ export const CategoriesPage = () => {
         return updateSubcategoryAction(id, {
           name: data.name,
           scope: data.scope,
-          parent: data.parentId, // padre = category
+          parent: data.parentId,
           company: companyId!,
         } as any);
       }
 
-      // subsubcategory
       return updateSubsubcategoryAction(id, {
         name: data.name,
         scope: data.scope,
-        parent: data.parentId, // padre = subcategory
+        parent: data.parentId,
         company: companyId!,
       } as any);
     },
@@ -278,23 +415,33 @@ export const CategoriesPage = () => {
     mutationFn: async ({ id, level }) => {
       if (level === "category") {
         await deleteCategoryAction(id);
-        return; // explícito: void
+        return;
       }
+
       if (level === "subcategory") {
         await deleteSubcategoryAction(id);
         return;
       }
+
       await deleteSubsubcategoryAction(id);
-      // sin return -> void
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["categories", companyId],
       });
-      reset;
+      reset();
       setCategoryToDelete(null);
       setEditingId(null);
       setShowForm(false);
+    },
+  });
+
+  const reorderMut = useMutation({
+    mutationFn: reorderCategoriesAction,
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["categories", companyId],
+      });
     },
   });
 
@@ -311,7 +458,6 @@ export const CategoriesPage = () => {
   };
 
   const openEdit = (row: Row) => {
-    // Preefill como ya lo hacías:
     if (row.level === "category") {
       reset({
         name: row.name,
@@ -335,15 +481,10 @@ export const CategoriesPage = () => {
         parentId: row.subId,
       });
     }
+
     setEditingId(row.id);
     setShowForm(true);
   };
-
-  // const handleCancelForm = () => {
-  //   reset();
-  //   setEditingId(null);
-  //   setShowForm(false);
-  // };
 
   const handleDeleteClick = (category: Row) => {
     setCategoryToDelete(category);
@@ -353,15 +494,15 @@ export const CategoriesPage = () => {
 
   const confirmDelete = () => {
     if (!categoryToDelete) return;
+
     deleteMut.mutate({
       id: categoryToDelete.id,
       level: categoryToDelete.level,
     });
   };
+
   const onSubmit = (form: CategoryFormValues) => {
-    // validación: si no es "category", parentId es requerido
     if (form.level !== "category" && !form.parentId) {
-      // puedes usar setError si quieres pintar error
       return;
     }
 
@@ -374,57 +515,227 @@ export const CategoriesPage = () => {
 
   const handleEdit = (row: Row) => {
     openEdit(row);
-    // // Prefill según nivel y jerarquía
-    // if (row.level === "category") {
-    //   reset({
-    //     name: row.name,
-    //     level: "category",
-    //     scope: (row.scope as Scope) ?? "COMPANY",
-    //     parentId: "",
-    //     type: row.type,
-    //   });
-    // } else if (row.level === "subcategory") {
-    //   reset({
-    //     name: row.name,
-    //     level: "subcategory",
-    //     scope: (row.scope as Scope) ?? "COMPANY",
-    //     parentId: row.catId, // su padre es la categoría
-    //   });
-    // } else {
-    //   // subsubcategory
-    //   reset({
-    //     name: row.name,
-    //     level: "subsubcategory",
-    //     scope: (row.scope as Scope) ?? "COMPANY",
-    //     parentId: row.subId, // su padre es la subcategoría
-    //   });
-    // }
-    // setEditingId(row.id);
   };
 
   const handleBack = () => {
     if (backTo) {
-      navigate(backTo, { replace: true }); // regresa exactamente a la vista anterior (tabs/filtros incluidos)
+      navigate(backTo, { replace: true });
     } else if (companyId) {
-      // fallback razonable a la vista de la empresa con la cuenta activa marcada
       navigate(`/group/${groupId}/company/${companyId}`, { replace: true });
     } else {
-      navigate(-1); // último recurso
+      navigate(-1);
     }
   };
+
+  const toggleNode = (id: string) => {
+    setExpandedNodes((prev) => {
+      const next = new Set(prev);
+
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+
+      return next;
+    });
+  };
+
+  const handleDragStart = (event: DragEvent<HTMLDivElement>, dragState: DragState) => {
+    if (reorderMut.isPending) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", dragState.id);
+    setDraggingNode(dragState);
+  };
+
+  const handleDragOver = (
+    event: DragEvent<HTMLDivElement>,
+    target: DragState
+  ) => {
+    if (
+      reorderMut.isPending ||
+      !draggingNode ||
+      draggingNode.id === target.id ||
+      draggingNode.parentId !== target.parentId ||
+      draggingNode.level !== target.level
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    if (dragOverId !== target.id) {
+      setDragOverId(target.id);
+    }
+  };
+
+  const handleDrop = (
+    event: DragEvent<HTMLDivElement>,
+    target: DragState
+  ) => {
+    event.preventDefault();
+
+    if (
+      reorderMut.isPending ||
+      !draggingNode ||
+      draggingNode.id === target.id ||
+      draggingNode.parentId !== target.parentId ||
+      draggingNode.level !== target.level
+    ) {
+      setDragOverId(null);
+      return;
+    }
+
+    const previousTree = orderedTree;
+    const nextTree = reorderTreeByParent(
+      orderedTree,
+      target.parentId,
+      draggingNode.id,
+      target.id
+    );
+    const orderedIds = findSiblingIdsByParent(nextTree, target.parentId);
+
+    setOrderedTree(nextTree);
+
+    reorderMut.mutate(
+      {
+        level: target.level,
+        parentId: target.parentId,
+        orderedIds,
+      },
+      {
+        onError: () => {
+          setOrderedTree(previousTree);
+        },
+      }
+    );
+
+    setDragOverId(null);
+    setDraggingNode(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingNode(null);
+    setDragOverId(null);
+  };
+
+  const renderTree = (nodes: TreeNode[], depth = 0, parentId = "root") =>
+    nodes.map((node) => {
+      const { row, children } = node;
+      const hasChildren = children.length > 0;
+      const isExpanded = hasChildren && (isFiltering || expandedNodes.has(row.id));
+      const typeLabel = getTypeLabel(row.type);
+      const dragState: DragState = {
+        id: row.id,
+        parentId,
+        level: row.level,
+      };
+      const isDropTarget = dragOverId === row.id;
+      const isDragging = draggingNode?.id === row.id;
+
+      return (
+        <div key={row.id}>
+          <div
+            draggable={!isFiltering && !reorderMut.isPending}
+            onDragStart={(event) => handleDragStart(event, dragState)}
+            onDragOver={(event) => handleDragOver(event, dragState)}
+            onDrop={(event) => handleDrop(event, dragState)}
+            onDragEnd={handleDragEnd}
+            className={`flex items-center justify-between gap-4 px-4 py-3 transition-colors ${
+              isDropTarget
+                ? "bg-red-50 ring-1 ring-inset ring-red-200"
+                : "hover:bg-gray-50"
+            } ${isDragging ? "opacity-60" : ""} ${
+              isFiltering || reorderMut.isPending ? "cursor-default" : "cursor-move"
+            }`}
+          >
+            <div
+              className="flex min-w-0 flex-1 items-center gap-3"
+              style={{ paddingLeft: `${depth * 1.25}rem` }}
+            >
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-400">
+                <GripVertical className="h-4 w-4" />
+              </div>
+
+              {hasChildren ? (
+                <button
+                  type="button"
+                  onClick={() => toggleNode(row.id)}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                  aria-label={
+                    isExpanded ? "Colapsar categoria" : "Expandir categoria"
+                  }
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+              ) : (
+                <span className="h-8 w-8 shrink-0" />
+              )}
+
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium text-gray-900">{row.name}</span>
+                  {getLevelBadge(row.level)}
+                  {typeLabel && (
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                      {typeLabel}
+                    </span>
+                  )}
+                </div>
+
+                {depth > 0 && (
+                  <p className="truncate text-xs text-gray-500">{row.path}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                type="button"
+                onClick={() => handleEdit(row)}
+                className="p-1 text-green-600 hover:text-green-800 transition-colors"
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteClick(row)}
+                className="p-1 text-red-600 hover:text-red-800 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {hasChildren && isExpanded && (
+            <div className="border-l border-gray-100 ml-8">
+              {renderTree(children, depth + 1, row.id)}
+            </div>
+          )}
+        </div>
+      );
+    });
 
   return (
     <>
       <div className="max-w-6xl py-6 mx-auto">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          {/* Category Management Header */}
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Administrar Categorías
+                Administrar Categorias
               </h2>
               <p className="text-gray-600 mt-1">
-                Gestiona las categorías de movimientos financieros para{" "}
+                Gestiona las categorias de movimientos financieros para{" "}
                 {companyName}
               </p>
             </div>
@@ -440,20 +751,16 @@ export const CategoriesPage = () => {
                 className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
-                <span>Nueva Categoría</span>
+                <span>Nueva Categoria</span>
               </button>
             </div>
           </div>
 
-          {/* Category Form */}
           {showForm && (
             <form
               onSubmit={handleSubmit(onSubmit)}
               className="bg-gray-50 rounded-lg p-6 mb-8"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                {/* {editingCategory ? "Editar Categoría" : "Nueva Categoría"} */}
-              </h3>
               <div className="grid grid-cols-12 gap-4">
                 <div className="col-span-4">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -462,7 +769,7 @@ export const CategoriesPage = () => {
                   <input
                     type="text"
                     {...register("name")}
-                    placeholder="Nombre de la categoría..."
+                    placeholder="Nombre de la categoria..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   />
                 </div>
@@ -475,8 +782,8 @@ export const CategoriesPage = () => {
                     {...register("level")}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   >
-                    <option value="category">Categoría</option>
-                    <option value="subcategory">Subcategoría</option>
+                    <option value="category">Categoria</option>
+                    <option value="subcategory">Subcategoria</option>
                     <option value="subsubcategory">Detalle</option>
                   </select>
                 </div>
@@ -484,7 +791,7 @@ export const CategoriesPage = () => {
                 {level !== "category" ? (
                   <div className="col-span-3">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Categoría Padre
+                      Categoria Padre
                     </label>
                     <select
                       {...register("parentId")}
@@ -508,33 +815,15 @@ export const CategoriesPage = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                     >
                       <option value="">Seleccionar...</option>
-                      <option key="income" value="INCOME">
-                        Ingreso
-                      </option>
-                      <option key="expense" value="EXPENSE">
-                        Egreso
-                      </option>
+                      <option value="INCOME">Ingreso</option>
+                      <option value="EXPENSE">Egreso</option>
                     </select>
                   </div>
                 )}
 
-                {/* <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Alcance
-                  </label>
-                  <select
-                    {...register("scope")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  >
-                    <option value="COMPANY">Empresa</option>
-                    <option value="ACCOUNT">Cuenta</option>
-                  </select>
-                </div> */}
-
                 <div className="col-span-2 flex items-end">
                   <button
                     type="submit"
-                    // disabled={!categoryFormData.name}
                     className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {editingId ? "Actualizar" : "Agregar"}
@@ -544,33 +833,18 @@ export const CategoriesPage = () => {
             </form>
           )}
 
-          {/* Filters */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
             <div className="flex items-center space-x-4">
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar categorías..."
+                  placeholder="Buscar categorias..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 />
               </div>
-
-              {/* <select
-                value={scopeFilter}
-                onChange={(e) =>
-                  setScopeFilter(
-                    e.target.value as "ALL" | "COMPANY" | "ACCOUNT"
-                  )
-                }
-                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              >
-                <option value="ALL">Todos los alcances</option>
-                <option value="COMPANY">Solo Empresa</option>
-                <option value="ACCOUNT">Solo Cuenta</option>
-              </select> */}
             </div>
 
             <select
@@ -578,7 +852,7 @@ export const CategoriesPage = () => {
               onChange={(e) => onChangeCatFilter(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             >
-              <option value="">Todas las categorías</option>
+              <option value="">Todas las categorias</option>
               {catOptions.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -592,7 +866,7 @@ export const CategoriesPage = () => {
               disabled={!catFilter}
               className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
             >
-              <option value="">Todas las subcategorías</option>
+              <option value="">Todas las subcategorias</option>
               {subOptions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -601,67 +875,33 @@ export const CategoriesPage = () => {
             </select>
 
             <div className="text-sm text-gray-500">
-              {filteredRows.length} categorías encontradas
+              {visibleCount} categorias encontradas
             </div>
           </div>
 
-          {/* Categories Table */}
-          <div className="overflow-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Categoría
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Nivel
-                  </th>
-                  {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Alcance
-                  </th> */}
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Acciones
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredRows.map((category) => (
-                  <tr
-                    key={category.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-4 py-4 text-sm text-gray-900">
-                      <div className="font-medium">{category.path}</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {getLevelBadge(category.level)}
-                    </td>
-                    {/* <td className="px-4 py-4 whitespace-nowrap">
-                      {getScopeBadge(category.scope)}
-                    </td> */}
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="p-1 text-green-600 hover:text-green-800 transition-colors"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(category)}
-                          className="p-1 text-red-600 hover:text-red-800 transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="overflow-hidden rounded-xl border border-gray-200">
+            <div className="border-b border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="text-xs font-medium uppercase tracking-wider text-gray-500">
+                Arbol de categorias
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Arrastra para reordenar dentro del mismo nivel. Mientras haya filtros activos, el reordenamiento se desactiva.
+              </p>
+            </div>
+
+            {filteredTree.length > 0 ? (
+              <div className="divide-y divide-gray-200 bg-white">
+                {renderTree(filteredTree)}
+              </div>
+            ) : (
+              <div className="bg-white px-4 py-8 text-center text-sm text-gray-500">
+                No hay categorias que coincidan con los filtros actuales.
+              </div>
+            )}
           </div>
         </div>
       </div>
+
       {categoryToDelete && (
         <DeleteCategoryAlert
           category={categoryToDelete}
