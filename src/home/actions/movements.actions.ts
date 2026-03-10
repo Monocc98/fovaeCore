@@ -122,6 +122,12 @@ export const getImportBatchSummaryAction = async (
   return data;
 };
 
+export const deleteImportBatchAction = async (idBatch: string) => {
+  const { data } = await fovaeCoreApi.delete(`/movements/importBatches/${idBatch}`);
+
+  return data;
+};
+
 export const importSolucionFactibleAction = async (
   accountId: string,
   file: File,

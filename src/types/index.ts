@@ -1,4 +1,5 @@
 export * from './account.interface'
+export * from './admin.interface'
 export * from './authResponse.interface'
 export * from './budget.interface'
 export * from './categories.interfaces'

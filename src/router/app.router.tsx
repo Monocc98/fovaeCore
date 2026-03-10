@@ -1,4 +1,6 @@
+import { AdminCenterPage } from "@/admin/pages";
 import { AuthLayout } from "@/auth/layouts/AuthLayout";
+import { RequiredSuperAdmin } from "@/auth/guards/RequiredSuperAdmin";
 import {
   BrowsePage,
   ExpenseBudgetObjectivePage,
@@ -36,6 +38,10 @@ export const appRouter = createBrowserRouter([
         children: [
           //Nivel 1: grupos
           { index: true, element: <BrowsePage /> },
+          {
+            element: <RequiredSuperAdmin />,
+            children: [{ path: "admin", element: <AdminCenterPage /> }],
+          },
 
           // Nivel 2: empresas de un grupo
           {

@@ -127,6 +127,38 @@ const rowForMonth = (rows: MonthRow[], selected: MonthRow): MonthRow | null => {
   return byCalendar ?? null;
 };
 
+const aggregateRowsForMonths = (rows: MonthRow[], rangeMonths: MonthRow[]): MonthRow | null => {
+  if (!rows.length || !rangeMonths.length) return null;
+
+  let totalBudget = 0;
+  let totalSpent = 0;
+  let totalRemaining = 0;
+  let hasData = false;
+
+  for (const month of rangeMonths) {
+    const match = rowForMonth(rows, month);
+    if (!match) continue;
+
+    hasData = true;
+    const budget = parseNumber(match.budget);
+    const spent = parseNumber(match.actual ?? match.spent);
+    const remaining = parseNumber(match.remaining ?? budget - spent);
+
+    totalBudget += budget;
+    totalSpent += spent;
+    totalRemaining += remaining;
+  }
+
+  if (!hasData) return null;
+
+  return {
+    budget: totalBudget,
+    actual: totalSpent,
+    spent: totalSpent,
+    remaining: totalRemaining,
+  };
+};
+
 const semaforo = (budget: number, spent: number, remaining: number) => {
   if (remaining < 0) {
     return {
@@ -201,7 +233,7 @@ export const ExpenseBudgetObjectivePage = () => {
     [companyData]
   );
 
-  const [selectedMonthIndex, setSelectedMonthIndex] = useState(0);
+  const [selectedPeriod, setSelectedPeriod] = useState("0");
 
   const currentMonthIndex = useMemo(() => {
     if (!months.length) return 0;
@@ -229,10 +261,23 @@ export const ExpenseBudgetObjectivePage = () => {
 
   useEffect(() => {
     if (!months.length) return;
-    setSelectedMonthIndex(currentMonthIndex);
+    setSelectedPeriod((prev) => {
+      if (prev === "global") return prev;
+      const idx = Number(prev);
+      if (Number.isInteger(idx) && idx >= 0 && idx < months.length) return prev;
+      return String(currentMonthIndex);
+    });
   }, [months, currentMonthIndex]);
 
+  const isGlobal = selectedPeriod === "global";
+  const selectedMonthIndex = Number(selectedPeriod);
   const selectedMonth = months[selectedMonthIndex] ?? months[0];
+  const globalMonthsRange = useMemo(() => {
+    if (!months.length) return [] as MonthRow[];
+    const endIndex = Math.min(currentMonthIndex, months.length - 1);
+    return months.slice(0, endIndex + 1);
+  }, [months, currentMonthIndex]);
+  const selectedRange = isGlobal ? globalMonthsRange : selectedMonth ? [selectedMonth] : [];
 
   const categories = useMemo(() => {
     const rawCategories: RawNode[] = Array.isArray(companyData?.categories)
@@ -264,12 +309,13 @@ export const ExpenseBudgetObjectivePage = () => {
   );
 
   const selectedSummary = useMemo(() => {
-    if (!selectedMonth) return null;
-    return rowForMonth(summaryByMonth, selectedMonth);
-  }, [summaryByMonth, selectedMonth]);
+    if (!selectedRange.length) return null;
+    if (isGlobal) return aggregateRowsForMonths(summaryByMonth, selectedRange);
+    return rowForMonth(summaryByMonth, selectedRange[0]);
+  }, [summaryByMonth, selectedRange, isGlobal]);
 
   const flattenRows = useMemo(() => {
-    if (!selectedMonth) return [] as Array<{ node: TreeNode; depth: number }>;
+    if (!selectedRange.length) return [] as Array<{ node: TreeNode; depth: number }>;
 
     const rows: Array<{ node: TreeNode; depth: number }> = [];
 
@@ -284,7 +330,7 @@ export const ExpenseBudgetObjectivePage = () => {
 
     walk(categories, 0);
     return rows;
-  }, [categories, expanded, selectedMonth]);
+  }, [categories, expanded, selectedRange]);
 
   const handleBack = () => {
     if (backTo) navigate(backTo, { replace: true });
@@ -306,7 +352,7 @@ export const ExpenseBudgetObjectivePage = () => {
     );
   }
 
-  if (!selectedMonth) {
+  if (!selectedRange.length) {
     return (
       <div className="p-8">
         <div className="rounded-lg border border-gray-200 bg-white p-4 text-gray-600">
@@ -316,7 +362,12 @@ export const ExpenseBudgetObjectivePage = () => {
     );
   }
 
-  const monthTitle = resolveMonthLabel(selectedMonth, selectedMonthIndex);
+  const monthTitle = isGlobal
+    ? `Global (${resolveMonthLabel(selectedRange[0], 0)} - ${resolveMonthLabel(
+        selectedRange[selectedRange.length - 1],
+        selectedRange.length - 1
+      )})`
+    : resolveMonthLabel(selectedRange[0], selectedMonthIndex);
 
   const summaryBudget = parseNumber(selectedSummary?.budget);
   const summarySpent = parseNumber(selectedSummary?.actual ?? selectedSummary?.spent);
@@ -325,7 +376,9 @@ export const ExpenseBudgetObjectivePage = () => {
   );
   const summaryState = semaforo(summaryBudget, summarySpent, summaryRemaining);
   const chartData = categories.map((node) => {
-    const byMonth = rowForMonth(node.byMonth, selectedMonth);
+    const byMonth = isGlobal
+      ? aggregateRowsForMonths(node.byMonth, selectedRange)
+      : rowForMonth(node.byMonth, selectedRange[0]);
     const budget = parseNumber(byMonth?.budget);
     const spent = parseNumber(byMonth?.actual ?? byMonth?.spent);
     return {
@@ -349,16 +402,17 @@ export const ExpenseBudgetObjectivePage = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">Mes</span>
+            <span className="text-sm text-gray-500">Periodo</span>
             <select
-              value={selectedMonthIndex}
-              onChange={(e) => setSelectedMonthIndex(Number(e.target.value))}
+              value={selectedPeriod}
+              onChange={(e) => setSelectedPeriod(e.target.value)}
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
             >
+              <option value="global">Global</option>
               {months.map((m, idx) => {
                 const label = resolveMonthLabel(m, idx);
                 return (
-                  <option key={`${monthKey(m)}-${idx}`} value={idx}>
+                  <option key={`${monthKey(m)}-${idx}`} value={String(idx)}>
                     {label}
                   </option>
                 );
@@ -462,7 +516,9 @@ export const ExpenseBudgetObjectivePage = () => {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {flattenRows.map(({ node, depth }) => {
-                const byMonth = rowForMonth(node.byMonth, selectedMonth);
+                const byMonth = isGlobal
+                  ? aggregateRowsForMonths(node.byMonth, selectedRange)
+                  : rowForMonth(node.byMonth, selectedRange[0]);
                 const budget = parseNumber(byMonth?.budget);
                 const spent = parseNumber(byMonth?.actual ?? byMonth?.spent);
                 const remaining = parseNumber(byMonth?.remaining ?? budget - spent);

@@ -110,6 +110,7 @@ export const BrowsePage = () => {
     id: string;
     name: string;
   } | null>(null);
+  const [resumeBatchId, setResumeBatchId] = useState<string | null>(null);
 
   const tabs = useMemo<Tab[]>(() => {
     if (!overlay) return [];
@@ -332,8 +333,8 @@ export const BrowsePage = () => {
                       onImportDataClick={
                         level === "accounts"
                           ? () => {
-                            // g es la cuenta actual en este TabsContent
                             setImportAccount({ id: g.id, name: g.name });
+                            setResumeBatchId(null);
                             setIsImportOpen(true);
                           }
                           : undefined
@@ -421,9 +422,9 @@ export const BrowsePage = () => {
                           <PendingProcessesCard
                             accountId={g.id}
                             onProcessClick={(p) => {
-                              // TODO: abrir modal/route de resumen
-                              console.log("Retomar batch:", p.id);
-                              // navigate(`/imports/${p.id}`)  // recomendado
+                              setImportAccount({ id: g.id, name: g.name });
+                              setResumeBatchId(p.id);
+                              setIsImportOpen(true);
                             }}
                             onViewAll={() => {
                               // navigate(`/company/${companyId}/imports`) o lo que decidas
@@ -444,9 +445,14 @@ export const BrowsePage = () => {
           isOpen={isImportOpen}
           accountId={importAccount.id}
           accountName={importAccount.name}
-          onClose={() => setIsImportOpen(false)}
+          resumeBatchId={resumeBatchId}
+          onClose={() => {
+            setIsImportOpen(false);
+            setResumeBatchId(null);
+          }}
           onSuccess={async () => {
             setIsImportOpen(false);
+            setResumeBatchId(null);
 
             // refresca movimientos
             await queryClient.invalidateQueries({
@@ -456,6 +462,10 @@ export const BrowsePage = () => {
             // refresca overlay (tabs / balances)
             await queryClient.invalidateQueries({
               queryKey: ["homeOverlay"],
+            });
+
+            await queryClient.invalidateQueries({
+              queryKey: ["pendingImportBatches", importAccount.id],
             });
           }}
         />

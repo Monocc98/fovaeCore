@@ -1,11 +1,12 @@
 import { useAuthStore } from "@/auth/store/auth.store";
 import { CustomLogo } from "@/components/custom/CustomLogo";
 import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
+import { Shield, LogOut } from "lucide-react";
 import { Link } from "react-router";
 
 export const HeaderHome = () => {
-  const { user, logout } = useAuthStore();
+  const { user, permissions, logout } = useAuthStore();
+  const isSuperAdmin = permissions?.globalRole === "SUPER_ADMIN";
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -21,6 +22,18 @@ export const HeaderHome = () => {
             </Link>
           ) : (
             <>
+              {isSuperAdmin && (
+                <Link to="/admin">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 border-slate-300 text-slate-700 hover:bg-slate-100"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Admin Center
+                  </Button>
+                </Link>
+              )}
               <div className="flex items-center space-x-3 bg-gray-50 rounded-full px-4 py-2 hover:bg-gray-100 transition-colors cursor-pointer">
                 <div className="w-8 h-8 bg-red-800 rounded-full flex items-center justify-center text-white">
                   {user?.name.substring(0, 2)}
