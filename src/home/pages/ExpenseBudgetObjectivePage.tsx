@@ -1,7 +1,7 @@
 import { getExpenseBudgetTreeAction } from "@/home/actions/graphics.actions";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import {
   Bar,
@@ -234,6 +234,7 @@ export const ExpenseBudgetObjectivePage = () => {
   );
 
   const [selectedPeriod, setSelectedPeriod] = useState("0");
+  const didInitSelectedPeriod = useRef(false);
 
   const currentMonthIndex = useMemo(() => {
     if (!months.length) return 0;
@@ -262,6 +263,10 @@ export const ExpenseBudgetObjectivePage = () => {
   useEffect(() => {
     if (!months.length) return;
     setSelectedPeriod((prev) => {
+      if (!didInitSelectedPeriod.current) {
+        didInitSelectedPeriod.current = true;
+        return String(currentMonthIndex);
+      }
       if (prev === "global") return prev;
       const idx = Number(prev);
       if (Number.isInteger(idx) && idx >= 0 && idx < months.length) return prev;
@@ -299,9 +304,40 @@ export const ExpenseBudgetObjectivePage = () => {
   }, [companyData]);
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const toggleExpanded = (id: string) =>
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const filteredCategories = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return categories;
+
+    const filterNode = (node: TreeNode): TreeNode | null => {
+      const children = node.children
+        .map((child) => filterNode(child))
+        .filter((child): child is TreeNode => child !== null);
+      const matchesSelf =
+        node.name.toLowerCase().includes(query) || node.type.toLowerCase().includes(query);
+
+      if (matchesSelf || children.length > 0) {
+        return { ...node, children };
+      }
+
+      return null;
+    };
+
+    return categories
+      .map((node) => filterNode(node))
+      .filter((node): node is TreeNode => node !== null);
+  }, [categories, searchTerm]);
+
+  const visibleCount = useMemo(() => {
+    const countNodes = (nodes: TreeNode[]): number =>
+      nodes.reduce((total, node) => total + 1 + countNodes(node.children), 0);
+
+    return countNodes(filteredCategories);
+  }, [filteredCategories]);
 
   const summaryByMonth: MonthRow[] = useMemo(
     () => (Array.isArray(companyData?.summaryByMonth) ? companyData.summaryByMonth : []),
@@ -328,9 +364,9 @@ export const ExpenseBudgetObjectivePage = () => {
       }
     };
 
-    walk(categories, 0);
+    walk(filteredCategories, 0);
     return rows;
-  }, [categories, expanded, selectedRange]);
+  }, [filteredCategories, expanded, selectedRange]);
 
   const handleBack = () => {
     if (backTo) navigate(backTo, { replace: true });
@@ -375,7 +411,7 @@ export const ExpenseBudgetObjectivePage = () => {
     selectedSummary?.remaining ?? summaryBudget - summarySpent
   );
   const summaryState = semaforo(summaryBudget, summarySpent, summaryRemaining);
-  const chartData = categories.map((node) => {
+  const chartData = filteredCategories.map((node) => {
     const byMonth = isGlobal
       ? aggregateRowsForMonths(node.byMonth, selectedRange)
       : rowForMonth(node.byMonth, selectedRange[0]);
@@ -498,6 +534,21 @@ export const ExpenseBudgetObjectivePage = () => {
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
         <div className="border-b border-gray-200 px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar categoria..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-72 rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <span className="text-xs text-gray-500">{visibleCount} categorias visibles</span>
+          </div>
+        </div>
+        <div className="border-b border-gray-200 px-5 py-3">
           <h2 className="text-sm font-semibold text-gray-900">
             Arbol de categoria {" > "} subcategoria {" > "} detalle (solo egresos)
           </h2>
@@ -576,7 +627,9 @@ export const ExpenseBudgetObjectivePage = () => {
               {!flattenRows.length && (
                 <tr>
                   <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                    No hay categorias de egresos para mostrar.
+                    {searchTerm.trim()
+                      ? "No hay categorias que coincidan con la busqueda."
+                      : "No hay categorias de egresos para mostrar."}
                   </td>
                 </tr>
               )}
