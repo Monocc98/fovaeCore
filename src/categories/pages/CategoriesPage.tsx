@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { getLevelBadge } from "@/helpers";
 import { useForm } from "react-hook-form";
-import { useEffect, useMemo, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createCategoryAction,
@@ -38,9 +38,11 @@ interface CategoryFormValues {
   name: string;
   level: Level;
   parentId?: string;
+  categoryId?: string;
   scope: Scope;
   id?: string;
   type?: string;
+  bucket?: string;
 }
 
 export type Row = {
@@ -48,6 +50,7 @@ export type Row = {
   level: RowLevel;
   name: string;
   type?: string;
+  bucket?: string;
   path: string;
   scope: "COMPANY" | "ACCOUNT" | string;
   sortIndex?: number;
@@ -69,6 +72,50 @@ type DragState = {
 const getTypeLabel = (type?: string) => {
   if (type === "INCOME") return "Ingreso";
   if (type === "EXPENSE") return "Egreso";
+  return null;
+};
+
+const normalizeBucket = (bucket?: string | null) => {
+  if (!bucket) return undefined;
+
+  const normalized = String(bucket).trim().toUpperCase().replace(/[\s-]+/g, "_");
+
+  if (normalized === "INCOME" || normalized === "INGRESO" || normalized === "INGRESOS") {
+    return "INCOME";
+  }
+
+  if (
+    normalized === "FIXED_EXPENSE" ||
+    normalized === "FIXED_EXPENSES" ||
+    normalized === "EGRESO_FIJO" ||
+    normalized === "EGRESOS_FIJOS"
+  ) {
+    return "FIXED_EXPENSE";
+  }
+
+  if (
+    normalized === "VARIABLE_EXPENSE" ||
+    normalized === "VARIABLE_EXPENSES" ||
+    normalized === "EGRESO_VARIABLE" ||
+    normalized === "EGRESOS_VARIABLES"
+  ) {
+    return "VARIABLE_EXPENSE";
+  }
+
+  if (normalized === "FAMILY" || normalized === "FAMILIA") {
+    return "FAMILY";
+  }
+
+  return normalized;
+};
+
+const getBucketLabel = (bucket?: string) => {
+  const normalizedBucket = normalizeBucket(bucket);
+
+  if (normalizedBucket === "INCOME") return "Ingreso";
+  if (normalizedBucket === "FIXED_EXPENSE") return "Egreso Fijo";
+  if (normalizedBucket === "VARIABLE_EXPENSE") return "Egreso Variable";
+  if (normalizedBucket === "FAMILY") return "Family";
   return null;
 };
 
@@ -169,6 +216,7 @@ export const CategoriesPage = () => {
   const [catFilter, setCatFilter] = useState<string>("");
   const [subFilter, setSubFilter] = useState<string>("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -190,17 +238,23 @@ export const CategoriesPage = () => {
   const parentCategories: Category[] =
     categoriesQuery.data?.company?.categories ?? [];
 
-  const { register, handleSubmit, watch, reset } = useForm<CategoryFormValues>({
+  const { register, handleSubmit, watch, reset, setValue } = useForm<CategoryFormValues>({
     defaultValues: {
       name: "",
       level: "category",
       scope: "COMPANY",
       parentId: "",
+      categoryId: "",
       type: "",
+      bucket: "",
     },
   });
 
   const level = watch("level");
+  const type = watch("type");
+  const bucket = watch("bucket");
+  const categoryId = watch("categoryId");
+  const parentId = watch("parentId");
 
   const treeRows = useMemo<TreeNode[]>(() => {
     return sortBySortIndex(parentCategories).map((cat) => ({
@@ -213,6 +267,7 @@ export const CategoriesPage = () => {
         sortIndex: cat.sortIndex,
         catId: cat._id,
         type: cat.type,
+        bucket: normalizeBucket(cat.bucket),
       },
       children: sortBySortIndex(cat.subcategories ?? []).map((sub) => ({
         row: {
@@ -223,6 +278,7 @@ export const CategoriesPage = () => {
           scope: sub.scope,
           sortIndex: sub.sortIndex,
           catId: cat._id,
+          bucket: normalizeBucket(sub.bucket),
           subId: sub._id,
         },
         children: sortBySortIndex(sub.subsubcategories ?? []).map((leaf) => ({
@@ -234,6 +290,7 @@ export const CategoriesPage = () => {
             scope: leaf.scope,
             sortIndex: leaf.sortIndex,
             catId: cat._id,
+            bucket: normalizeBucket(leaf.bucket),
             subId: sub._id,
           },
           children: [],
@@ -264,18 +321,84 @@ export const CategoriesPage = () => {
     setExpandedNodes(nextExpanded);
   }, [treeRows]);
 
+  useEffect(() => {
+    if (level !== "category") {
+      if (type) {
+        setValue("type", "");
+      }
+      if (bucket) {
+        setValue("bucket", "");
+      }
+      return;
+    }
+
+    if (type === "INCOME") {
+      if (bucket !== "INCOME") {
+        setValue("bucket", "INCOME");
+      }
+      return;
+    }
+
+    if (type === "EXPENSE") {
+      if (bucket === "INCOME") {
+        setValue("bucket", "");
+      }
+      return;
+    }
+
+    setValue("bucket", "");
+  }, [bucket, level, type, setValue]);
+
+  useEffect(() => {
+    if (level !== "subsubcategory" && categoryId) {
+      setValue("categoryId", "");
+    }
+  }, [categoryId, level, setValue]);
+
+  useEffect(() => {
+    if (!showForm) return;
+
+    const frame = requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [showForm, editingId]);
+
   const parentOptions = useMemo(() => {
     if (level === "subcategory") {
       return parentCategories.map((c) => ({ id: c._id, name: c.name }));
     }
 
     if (level === "subsubcategory") {
-      const subs = parentCategories.flatMap((c) => c.subcategories ?? []);
-      return subs.map((s) => ({ id: s._id, name: s.name }));
+      if (!categoryId) {
+        return [];
+      }
+
+      const selectedCategory = parentCategories.find((c) => c._id === categoryId);
+      return (selectedCategory?.subcategories ?? []).map((s) => ({ id: s._id, name: s.name }));
     }
 
     return [];
-  }, [level, parentCategories]);
+  }, [categoryId, level, parentCategories]);
+
+  useEffect(() => {
+    if (level !== "subsubcategory") return;
+
+    if (!categoryId) {
+      if (parentId) {
+        setValue("parentId", "");
+      }
+      return;
+    }
+
+    const selectedCategory = parentCategories.find((c) => c._id === categoryId);
+    const availableParentIds = new Set((selectedCategory?.subcategories ?? []).map((sub) => sub._id));
+
+    if (parentId && !availableParentIds.has(parentId)) {
+      setValue("parentId", "");
+    }
+  }, [categoryId, level, parentCategories, parentId, setValue]);
 
   const catOptions = useMemo(
     () => parentCategories.map((c) => ({ id: c._id, name: c.name })),
@@ -303,7 +426,8 @@ export const CategoriesPage = () => {
         !query ||
         node.row.name.toLowerCase().includes(query) ||
         node.row.path.toLowerCase().includes(query) ||
-        (node.row.type?.toLowerCase().includes(query) ?? false);
+        (node.row.type?.toLowerCase().includes(query) ?? false) ||
+        (normalizeBucket(node.row.bucket)?.toLowerCase().includes(query) ?? false);
 
       const matchesCat = !catFilter || node.row.catId === catFilter;
       const matchesSub = !subFilter || node.row.subId === subFilter;
@@ -341,6 +465,7 @@ export const CategoriesPage = () => {
           name: payload.name,
           scope: payload.scope,
           type: payload.type,
+          bucket: normalizeBucket(payload.bucket),
           company: companyId!,
         } as any);
       }
@@ -365,7 +490,17 @@ export const CategoriesPage = () => {
       queryClient.invalidateQueries({
         queryKey: ["categories", companyId],
       });
-      reset();
+      reset({
+        name: "",
+        level: "category",
+        scope: "COMPANY",
+        parentId: "",
+        categoryId: "",
+        type: "",
+        bucket: "",
+      });
+      setEditingId(null);
+      setShowForm(false);
     },
   });
 
@@ -382,6 +517,7 @@ export const CategoriesPage = () => {
           name: data.name,
           scope: data.scope,
           type: data.type,
+          bucket: normalizeBucket(data.bucket),
           company: companyId!,
         } as any);
       }
@@ -406,8 +542,17 @@ export const CategoriesPage = () => {
       queryClient.invalidateQueries({
         queryKey: ["categories", companyId],
       });
-      reset();
+      reset({
+        name: "",
+        level: "category",
+        scope: "COMPANY",
+        parentId: "",
+        categoryId: "",
+        type: "",
+        bucket: "",
+      });
       setEditingId(null);
+      setShowForm(false);
     },
   });
 
@@ -452,7 +597,9 @@ export const CategoriesPage = () => {
       level: "category",
       scope: "COMPANY",
       parentId: "",
+      categoryId: "",
       type: "",
+      bucket: "",
     });
     setShowForm(true);
   };
@@ -464,7 +611,9 @@ export const CategoriesPage = () => {
         level: "category",
         scope: (row.scope as Scope) ?? "COMPANY",
         parentId: "",
+        categoryId: "",
         type: row.type,
+        bucket: normalizeBucket(row.bucket) ?? "",
       });
     } else if (row.level === "subcategory") {
       reset({
@@ -472,12 +621,14 @@ export const CategoriesPage = () => {
         level: "subcategory",
         scope: (row.scope as Scope) ?? "COMPANY",
         parentId: row.catId,
+        categoryId: "",
       });
     } else {
       reset({
         name: row.name,
         level: "subsubcategory",
         scope: (row.scope as Scope) ?? "COMPANY",
+        categoryId: row.catId,
         parentId: row.subId,
       });
     }
@@ -506,10 +657,25 @@ export const CategoriesPage = () => {
       return;
     }
 
+    if (form.level === "category") {
+      if (!form.type) {
+        return;
+      }
+
+      if (!form.bucket) {
+        return;
+      }
+    }
+
+    const normalizedForm: CategoryFormValues = {
+      ...form,
+      bucket: normalizeBucket(form.bucket),
+    };
+
     if (editingId) {
-      updateMut.mutate({ id: editingId, data: form });
+      updateMut.mutate({ id: editingId, data: normalizedForm });
     } else {
-      createMut.mutate(form);
+      createMut.mutate(normalizedForm);
     }
   };
 
@@ -630,6 +796,8 @@ export const CategoriesPage = () => {
       const hasChildren = children.length > 0;
       const isExpanded = hasChildren && (isFiltering || expandedNodes.has(row.id));
       const typeLabel = getTypeLabel(row.type);
+      const normalizedRowBucket = normalizeBucket(row.bucket);
+      const bucketLabel = getBucketLabel(normalizedRowBucket);
       const dragState: DragState = {
         id: row.id,
         parentId,
@@ -688,6 +856,16 @@ export const CategoriesPage = () => {
                   {typeLabel && (
                     <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
                       {typeLabel}
+                    </span>
+                  )}
+                  {bucketLabel && (
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                      {bucketLabel}
+                    </span>
+                  )}
+                  {!normalizedRowBucket && row.level === "category" && (
+                    <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
+                      Sin clasificar
                     </span>
                   )}
                 </div>
@@ -758,6 +936,7 @@ export const CategoriesPage = () => {
 
           {showForm && (
             <form
+              ref={formRef}
               onSubmit={handleSubmit(onSubmit)}
               className="bg-gray-50 rounded-lg p-6 mb-8"
             >
@@ -789,36 +968,85 @@ export const CategoriesPage = () => {
                 </div>
 
                 {level !== "category" ? (
-                  <div className="col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Categoria Padre
-                    </label>
-                    <select
-                      {...register("parentId")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="">Seleccionar...</option>
-                      {parentOptions.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
+                  <>
+                    {level === "subsubcategory" && (
+                      <div className="col-span-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Filtrar por categoria
+                        </label>
+                        <select
+                          {...register("categoryId")}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        >
+                          <option value="">Seleccionar categoria...</option>
+                          {catOptions.map((cat) => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <div className="col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        {level === "subcategory" ? "Categoria Padre" : "Subcategoria Padre"}
+                      </label>
+                      <select
+                        {...register("parentId")}
+                        disabled={level === "subsubcategory" && !categoryId}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="">
+                          {level === "subsubcategory"
+                            ? "Seleccionar subcategoria..."
+                            : "Seleccionar..."}
                         </option>
-                      ))}
-                    </select>
-                  </div>
+                        {parentOptions.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
                 ) : (
-                  <div className="col-span-3">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Tipo
-                    </label>
-                    <select
-                      {...register("type")}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                    >
-                      <option value="">Seleccionar...</option>
-                      <option value="INCOME">Ingreso</option>
-                      <option value="EXPENSE">Egreso</option>
-                    </select>
-                  </div>
+                  <>
+                    <div className="col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Tipo
+                      </label>
+                      <select
+                        {...register("type")}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="">Seleccionar...</option>
+                        <option value="INCOME">Ingreso</option>
+                        <option value="EXPENSE">Egreso</option>
+                      </select>
+                    </div>
+
+                    <div className="col-span-3">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Bucket
+                      </label>
+                      <select
+                        {...register("bucket")}
+                        disabled={!type || type === "INCOME"}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
+                      >
+                        <option value="">Seleccionar...</option>
+                        {type === "INCOME" && <option value="INCOME">Ingreso</option>}
+                        {type === "EXPENSE" && (
+                          <>
+                            <option value="FIXED_EXPENSE">Egreso Fijo</option>
+                            <option value="VARIABLE_EXPENSE">Egreso Variable</option>
+                            <option value="FAMILY">Family</option>
+                          </>
+                        )}
+                      </select>
+                    </div>
+                  </>
                 )}
 
                 <div className="col-span-2 flex items-end">

@@ -23,7 +23,7 @@ interface Props {
 }
 
 const pct = (value: number, ingresos: number) =>
-    ingresos > 0 ? `${((value / ingresos) * 100).toFixed(1)}%` : "0%";
+    ingresos > 0 ? `${((value / ingresos) * 100).toFixed(1)}%` : "N/A";
 
 export const CategorySummaryTable = ({
     title = "Resumen por Categorías",
@@ -75,7 +75,7 @@ export const CategorySummaryTable = ({
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-            <div className="bg-lineal-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
                 <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                 <p className="text-sm text-gray-600 mt-1">
                     Clasificación de ingresos y egresos totales

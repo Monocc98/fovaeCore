@@ -21,6 +21,10 @@ interface ConceptMappingStepProps {
   concepts: Concept[];
   totalRows: number;
   detectedSections?: string[];
+  resolvedSectionAccounts?: Array<{
+    sourceAccountLabel: string;
+    accountId: string;
+  }>;
   transferCandidatesCount?: number;
   initialSectionAccountMap?: Record<string, string>;
   onBack: () => void;
@@ -38,6 +42,7 @@ export const ConceptMappingStep = ({
   concepts,
   totalRows,
   detectedSections = [],
+  resolvedSectionAccounts = [],
   transferCandidatesCount = 0,
   initialSectionAccountMap = {},
   onBack,
@@ -66,6 +71,10 @@ export const ConceptMappingStep = ({
     refetchOnReconnect: false,
   });
   const accountOptions = accountsQuery.data?.accounts ?? [];
+  const accountNameById = useMemo(
+    () => new Map(accountOptions.map((account) => [account.id, account.name])),
+    [accountOptions]
+  );
 
   const subsubIndex = useMemo(() => {
     const index = new Map<
@@ -163,7 +172,7 @@ export const ConceptMappingStep = ({
     (concept) => !!mappings[concept.externalConceptKey]?.subsubcategoryId
   );
 
-  const needsExplicitSectionMapping = detectedSections.length > 2;
+  const needsExplicitSectionMapping = detectedSections.length > 1;
   const sectionsMissingAccount = needsExplicitSectionMapping
     ? detectedSections.filter((section) => !sectionAccountMap[section])
     : [];
@@ -190,7 +199,11 @@ export const ConceptMappingStep = ({
           mappings[concept.externalConceptKey].subsubcategoryId!,
       }));
 
-      const data = await confirmImportAction(batchId, conceptList);
+      const data = await confirmImportAction(
+        batchId,
+        conceptList,
+        needsExplicitSectionMapping ? sectionAccountMap : undefined
+      );
 
       console.log(`${data.insertedCount} movimientos importados exitosamente`);
       setConfirmResult({
@@ -284,54 +297,57 @@ export const ConceptMappingStep = ({
             </div>
 
             {detectedSections.length > 0 && (
-              <div className="mt-3 rounded-lg bg-gray-50 p-3 text-left">
-                <p className="mb-2 text-xs text-gray-500">Secciones detectadas</p>
-                <div className="flex flex-wrap gap-2">
-                  {detectedSections.map((section) => (
-                    <span
-                      key={section}
-                      className="rounded-full border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700"
-                    >
-                      {section}
-                    </span>
-                  ))}
+              <div className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <div className="mb-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-3 text-xs font-medium text-gray-600">
+                  <span>Seccion del CSV</span>
+                  <span>Cuenta destino</span>
                 </div>
-              </div>
-            )}
-
-            {needsExplicitSectionMapping && (
-              <div className="mt-3 max-h-44 overflow-y-auto rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <p className="mb-3 text-sm text-amber-800">
-                  Se detectaron mas de 2 secciones. Asigna una cuenta por seccion
-                  antes de confirmar.
-                </p>
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="space-y-2">
                   {detectedSections.map((section) => (
-                    <div key={section}>
-                      <label className="mb-1 block text-xs text-gray-600">
-                        Cuenta para {section}
-                      </label>
-                      <select
-                        value={sectionAccountMap[section] ?? ""}
-                        onChange={(event) =>
-                          setSectionAccountMap((prev) => ({
-                            ...prev,
-                            [section]: event.target.value,
-                          }))
-                        }
-                        className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        disabled={accountsQuery.isLoading}
-                      >
-                        <option value="">Seleccionar cuenta...</option>
-                        {accountOptions.map((account) => (
-                          <option key={account.id} value={account.id}>
-                            {account.name}
-                          </option>
-                        ))}
-                      </select>
+                    <div
+                      key={section}
+                      className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3"
+                    >
+                      <span className="truncate text-sm text-gray-900">{section}</span>
+                      {needsExplicitSectionMapping ? (
+                        <select
+                          value={sectionAccountMap[section] ?? ""}
+                          onChange={(event) => {
+                            setSectionAccountMap((prev) => ({
+                              ...prev,
+                              [section]: event.target.value,
+                            }));
+                            setError(null);
+                          }}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          disabled={accountsQuery.isLoading}
+                        >
+                          <option value="">Seleccionar cuenta...</option>
+                          {accountOptions.map((account) => (
+                            <option key={account.id} value={account.id}>
+                              {account.name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="truncate rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
+                          {accountNameById.get(sectionAccountMap[section]) ??
+                            accountNameById.get(
+                              resolvedSectionAccounts.find(
+                                (item) => item.sourceAccountLabel === section
+                              )?.accountId ?? ""
+                            ) ??
+                            "Cuenta default"}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
+                {needsExplicitSectionMapping && (
+                  <p className="mt-3 text-xs text-amber-700">
+                    Asigna una cuenta por seccion antes de confirmar.
+                  </p>
+                )}
               </div>
             )}
 

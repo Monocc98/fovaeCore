@@ -87,7 +87,7 @@ export const BrowsePage = () => {
     refetchOnReconnect: false,
   });
 
-  const { data: bucketsOverlay } = useQuery({
+  const { data: bucketsOverlay, isLoading: isBucketsLoading } = useQuery({
     queryKey: ["homeBucketsSummary"],
     queryFn: getBucketsSummaryAction,
     refetchOnWindowFocus: false,
@@ -359,7 +359,9 @@ export const BrowsePage = () => {
                         icon={<TableProperties className="w-5 h-5 text-gray-400" />}
                         description="Clasificación de ingresos y egresos totales"
                       >
-                        {g.id === activeId ? (
+                        {isBucketsLoading ? (
+                          <div className="text-sm text-gray-500">Cargando datos...</div>
+                        ) : g.id === activeId ? (
                           currentSummaryNode ? (
                             <CategorySummaryTable
                               title={currentSummaryNode.title}
@@ -376,12 +378,12 @@ export const BrowsePage = () => {
                   ) : (
                     // Solo monta el tab ACTIVO para no disparar varias queries
                     g.id === activeId && (
-                        <AccountsSection
-                          accountId={g.id}
-                          filters={filters}
-                          onChangeFilters={setFilters}
-                          categories={categories}
-                        />
+                      <AccountsSection
+                        accountId={g.id}
+                        filters={filters}
+                        onChangeFilters={setFilters}
+                        categories={categories}
+                      />
                     )
                   )}
                 </div>

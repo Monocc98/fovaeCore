@@ -3,6 +3,7 @@ export interface Category {
     scope:             string;
     company:           string;
     type:              string,
+    bucket?:           string;
     _id:               string;
     sortIndex?:        number;
     subcategories?: Subcategory[];
@@ -14,6 +15,7 @@ export interface Subcategory {
     scope:             string;
     parent:            string;
     company:           string;
+    bucket?:           string;
     sortIndex?:        number;
     subsubcategories?: Subsubcategory[];
 }
@@ -24,5 +26,6 @@ export interface Subsubcategory {
     scope:             string;
     parent:            string;
     company:           string;
+    bucket?:           string;
     sortIndex?:        number;
 }

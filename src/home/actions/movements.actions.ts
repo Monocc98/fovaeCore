@@ -12,6 +12,10 @@ export interface ImportMovementsResponse {
   source: "SOLUCION_FACTIBLE" | "SERVO_ESCOLAR" | string;
   totalRows: number;
   detectedSections?: string[];
+  resolvedSectionAccounts?: Array<{
+    sourceAccountLabel: string;
+    accountId: string;
+  }>;
   transferCandidatesCount?: number;
   concepts: Array<{
     externalConceptKey: string;
@@ -50,6 +54,13 @@ export interface ImportBatchSummaryResponse {
   source: ImportBatchSource;
   status: ImportBatchStatus; // en tu backend devuelve PENDING
   totalRows: number;
+  detectedSections?: string[];
+  resolvedSectionAccounts?: Array<{
+    sourceAccountLabel: string;
+    accountId: string;
+  }>;
+  transferCandidatesCount?: number;
+  sectionAccountMap?: Record<string, string>;
   concepts: Array<{
     externalConceptKey: string;
     externalCategoryRaw: string;
@@ -133,6 +144,7 @@ export const importSolucionFactibleAction = async (
   file: File,
   opts?: {
     investmentAccountId?: string;
+    accountMappings?: Record<string, string>;
   }
 ): Promise<ImportMovementsResponse> => {
   const formData = new FormData();
@@ -140,6 +152,9 @@ export const importSolucionFactibleAction = async (
   formData.append("accountId", accountId);
   if (opts?.investmentAccountId) {
     formData.append("investmentAccountId", opts.investmentAccountId);
+  }
+  if (opts?.accountMappings && Object.keys(opts.accountMappings).length > 0) {
+    formData.append("accountMappings", JSON.stringify(opts.accountMappings));
   }
 
   // OJO: ruta relativa a TU API, SIN /api si ya lo pone el baseURL
@@ -180,11 +195,17 @@ export const importServoEscolarAction = async (
 
 export const confirmImportAction = async (
   batchId: string,
-  concepts: Array<{ externalConceptKey: string; subsubcategoryId: string }>
+  concepts: Array<{ externalConceptKey: string; subsubcategoryId: string }>,
+  accountMappings?: Record<string, string>
 ): Promise<ConfirmImportResponse> => {
   const { data } = await fovaeCoreApi.post<ConfirmImportResponse>(
     `/movements/imports/solucion-factible/${batchId}/confirm`,
-    { concepts }
+    {
+      concepts,
+      ...(accountMappings && Object.keys(accountMappings).length > 0
+        ? { accountMappings }
+        : {}),
+    }
   );
 
   return data;

@@ -1,6 +1,7 @@
 import React, { useRef, useState } from "react";
 import { Upload, AlertCircle } from "lucide-react";
 import {
+  deleteImportBatchAction,
   importSolucionFactibleAction,
   importServoEscolarAction,
 } from "@/home/actions/movements.actions";
@@ -29,6 +30,10 @@ interface FileUploadStepProps {
     totalRows: number,
     meta?: {
       detectedSections?: string[];
+      resolvedSectionAccounts?: Array<{
+        sourceAccountLabel: string;
+        accountId: string;
+      }>;
       transferCandidatesCount?: number;
       sectionAccountMap?: Record<string, string>;
     }
@@ -47,6 +52,9 @@ export const FileUploadStep = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [investmentAccountId, setInvestmentAccountId] = useState("");
+  const [detectedSections, setDetectedSections] = useState<string[]>([]);
+  const [sectionAccountMap, setSectionAccountMap] = useState<Record<string, string>>({});
+  const [previewBatchId, setPreviewBatchId] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { companyId } = useParams<{ companyId?: string }>();
 
@@ -62,6 +70,14 @@ export const FileUploadStep = ({
   const investmentCandidates = companyAccounts.filter((a) => a.id !== accountId);
 
   const accept = source === "SOLUCION_FACTIBLE" ? ".csv" : ".xlsx,.xls";
+
+  const discardPreviewBatch = (batchId: string) => {
+    if (!batchId) return;
+
+    deleteImportBatchAction(batchId).catch((err) => {
+      console.warn("No se pudo eliminar el batch de previsualizacion:", err);
+    });
+  };
 
   const validateFile = (pickedFile: File) => {
     const name = pickedFile.name.toLowerCase();
@@ -88,6 +104,10 @@ export const FileUploadStep = ({
 
     setFile(pickedFile);
     setError(null);
+    setDetectedSections([]);
+    setSectionAccountMap({});
+    discardPreviewBatch(previewBatchId);
+    setPreviewBatchId("");
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -110,32 +130,80 @@ export const FileUploadStep = ({
     setFile(null);
     setError(null);
     setInvestmentAccountId("");
+    setDetectedSections([]);
+    setSectionAccountMap({});
+    discardPreviewBatch(previewBatchId);
+    setPreviewBatchId("");
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
   };
 
+  const handleCancel = () => {
+    discardPreviewBatch(previewBatchId);
+    onCancel();
+  };
+
   const handleProcess = async () => {
     if (!file) return;
+
+    const needsExplicitSectionMapping = detectedSections.length > 1;
+    const sectionsMissingAccount = needsExplicitSectionMapping
+      ? detectedSections.filter((section) => !sectionAccountMap[section])
+      : [];
+
+    if (sectionsMissingAccount.length > 0) {
+      setError("Faltan cuentas por asignar para algunas secciones detectadas.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      const accountMappings = needsExplicitSectionMapping
+        ? Object.fromEntries(
+            detectedSections.map((section) => [section, sectionAccountMap[section]])
+          )
+        : undefined;
+
       const data =
         source === "SOLUCION_FACTIBLE"
           ? await importSolucionFactibleAction(accountId, file, {
               investmentAccountId: investmentAccountId || undefined,
+              accountMappings,
             })
           : await importServoEscolarAction(accountId, file);
 
+      const nextDetectedSections = data.detectedSections ?? [];
+
+      if (
+        source === "SOLUCION_FACTIBLE" &&
+        !accountMappings &&
+        nextDetectedSections.length > 1
+      ) {
+        setDetectedSections(nextDetectedSections);
+        setSectionAccountMap(
+          Object.fromEntries(nextDetectedSections.map((section) => [section, ""]))
+        );
+        setPreviewBatchId(data.importBatchId);
+        return;
+      }
+
+      if (previewBatchId && previewBatchId !== data.importBatchId) {
+        deleteImportBatchAction(previewBatchId).catch((err) => {
+          console.warn("No se pudo eliminar el batch de previsualizacion:", err);
+        });
+      }
+
       onFileProcessed(data.importBatchId, data.concepts as Concept[], data.totalRows, {
-        detectedSections: data.detectedSections ?? [],
+        detectedSections: nextDetectedSections,
+        resolvedSectionAccounts: data.resolvedSectionAccounts ?? [],
         transferCandidatesCount: data.transferCandidatesCount ?? 0,
-        sectionAccountMap: investmentAccountId
+        sectionAccountMap: accountMappings ?? (investmentAccountId
           ? { INVERSION: investmentAccountId }
-          : {},
+          : {}),
       });
     } catch (err: any) {
       console.error("Error processing file:", err);
@@ -234,6 +302,44 @@ export const FileUploadStep = ({
             </div>
           )}
 
+          {detectedSections.length > 1 && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] gap-3 text-xs font-medium text-amber-900">
+                <span>Seccion del CSV</span>
+                <span>Cuenta destino</span>
+              </div>
+              <div className="space-y-2">
+                {detectedSections.map((section) => (
+                  <div
+                    key={section}
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] items-center gap-3"
+                  >
+                    <span className="truncate text-sm text-gray-900">{section}</span>
+                    <select
+                      value={sectionAccountMap[section] ?? ""}
+                      onChange={(event) => {
+                        setSectionAccountMap((prev) => ({
+                          ...prev,
+                          [section]: event.target.value,
+                        }));
+                        setError(null);
+                      }}
+                      className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      disabled={accountsQuery.isLoading}
+                    >
+                      <option value="">Seleccionar cuenta...</option>
+                      {companyAccounts.map((account) => (
+                        <option key={account.id} value={account.id}>
+                          {account.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div
             onDragOver={handleDragOver}
             onDrop={handleDrop}
@@ -275,7 +381,7 @@ export const FileUploadStep = ({
       <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-6 py-4 sm:px-8 sm:py-6">
         <div className="flex flex-col gap-3 sm:flex-row">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             className="flex-1 rounded-lg bg-gray-200 px-4 py-3 font-medium text-gray-900 transition-colors hover:bg-gray-300"
           >
             Cancelar
@@ -292,7 +398,7 @@ export const FileUploadStep = ({
                 <span>Procesando...</span>
               </>
             ) : (
-              "Procesar archivo"
+              detectedSections.length > 1 ? "Procesar con cuentas" : "Procesar archivo"
             )}
           </button>
         </div>

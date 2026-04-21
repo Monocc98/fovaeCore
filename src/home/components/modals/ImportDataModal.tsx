@@ -33,6 +33,10 @@ const createEmptyState = () => ({
   concepts: [] as Concept[],
   totalRows: 0,
   detectedSections: [] as string[],
+  resolvedSectionAccounts: [] as Array<{
+    sourceAccountLabel: string;
+    accountId: string;
+  }>,
   transferCandidatesCount: 0,
   sectionAccountMap: {} as Record<string, string>,
 });
@@ -51,6 +55,9 @@ export const ImportDataModal = ({
   const [concepts, setConcepts] = useState<Concept[]>([]);
   const [totalRows, setTotalRows] = useState(0);
   const [detectedSections, setDetectedSections] = useState<string[]>([]);
+  const [resolvedSectionAccounts, setResolvedSectionAccounts] = useState<
+    Array<{ sourceAccountLabel: string; accountId: string }>
+  >([]);
   const [transferCandidatesCount, setTransferCandidatesCount] = useState(0);
   const [sectionAccountMap, setSectionAccountMap] = useState<Record<string, string>>({});
 
@@ -85,6 +92,7 @@ export const ImportDataModal = ({
       setConcepts(state.concepts);
       setTotalRows(state.totalRows);
       setDetectedSections(state.detectedSections);
+      setResolvedSectionAccounts(state.resolvedSectionAccounts);
       setTransferCandidatesCount(state.transferCandidatesCount);
       setSectionAccountMap(state.sectionAccountMap);
     }
@@ -109,9 +117,18 @@ export const ImportDataModal = ({
     setBatchId(summary.importBatchId);
     setConcepts(normalizedConcepts);
     setTotalRows(summary.totalRows);
-    setDetectedSections((summary as any).detectedSections ?? []);
-    setTransferCandidatesCount((summary as any).transferCandidatesCount ?? 0);
-    setSectionAccountMap((summary as any).sectionAccountMap ?? {});
+    setDetectedSections(summary.detectedSections ?? []);
+    setResolvedSectionAccounts(summary.resolvedSectionAccounts ?? []);
+    setTransferCandidatesCount(summary.transferCandidatesCount ?? 0);
+    setSectionAccountMap(
+      summary.sectionAccountMap ??
+        Object.fromEntries(
+          (summary.resolvedSectionAccounts ?? []).map((item) => [
+            item.sourceAccountLabel,
+            item.accountId,
+          ])
+        )
+    );
     setStep("mapping");
   }, [resumeBatchId, resumeQuery.data]);
 
@@ -122,6 +139,7 @@ export const ImportDataModal = ({
     setConcepts(state.concepts);
     setTotalRows(state.totalRows);
     setDetectedSections(state.detectedSections);
+    setResolvedSectionAccounts(state.resolvedSectionAccounts);
     setTransferCandidatesCount(state.transferCandidatesCount);
     setSectionAccountMap(state.sectionAccountMap);
   };
@@ -132,6 +150,10 @@ export const ImportDataModal = ({
     rows: number,
     meta?: {
       detectedSections?: string[];
+      resolvedSectionAccounts?: Array<{
+        sourceAccountLabel: string;
+        accountId: string;
+      }>;
       transferCandidatesCount?: number;
       sectionAccountMap?: Record<string, string>;
     }
@@ -140,8 +162,17 @@ export const ImportDataModal = ({
     setConcepts(newConcepts);
     setTotalRows(rows);
     setDetectedSections(meta?.detectedSections ?? []);
+    setResolvedSectionAccounts(meta?.resolvedSectionAccounts ?? []);
     setTransferCandidatesCount(meta?.transferCandidatesCount ?? 0);
-    setSectionAccountMap(meta?.sectionAccountMap ?? {});
+    setSectionAccountMap(
+      meta?.sectionAccountMap ??
+        Object.fromEntries(
+          (meta?.resolvedSectionAccounts ?? []).map((item) => [
+            item.sourceAccountLabel,
+            item.accountId,
+          ])
+        )
+    );
     setStep("mapping");
   };
 
@@ -237,6 +268,7 @@ export const ImportDataModal = ({
               concepts={concepts}
               totalRows={totalRows}
               detectedSections={detectedSections}
+              resolvedSectionAccounts={resolvedSectionAccounts}
               transferCandidatesCount={transferCandidatesCount}
               initialSectionAccountMap={sectionAccountMap}
               onBack={handleBack}
