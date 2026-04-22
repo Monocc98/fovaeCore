@@ -6,6 +6,7 @@ import {
   getTransactionIcon,
 } from "@/helpers";
 import { deleteMovementAction } from "@/home/actions/movements.actions";
+import type { TransferRecord } from "@/home/actions/transfers.actions";
 import type { Movement } from "@/types/movement.interface";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -43,6 +44,7 @@ interface Props {
   onChangeFilters: (next: MovementsFilters) => void;
   accountId?: string;
   categories?: Category[];
+  transfers?: TransferRecord[];
 }
 
 export const MovementsTableCard = ({
@@ -50,7 +52,9 @@ export const MovementsTableCard = ({
   isLoading = false,
   filters,
   onChangeFilters,
+  accountId,
   categories = [],
+  transfers = [],
 }: Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
@@ -94,6 +98,135 @@ export const MovementsTableCard = ({
     const m = String(d.getUTCMonth() + 1).padStart(2, "0");
     const day = String(d.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
+  };
+
+  const getDateOnly = (value: unknown): string => {
+    const raw = String(value ?? "").trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+    if (!raw) return "";
+
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return "";
+
+    const y = d.getUTCFullYear();
+    const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  const getMovementAccountId = (movement: Movement) =>
+    String(
+      (movement.account as any)?.id ??
+      (movement.account as any)?._id ??
+      movement.account ??
+      accountId ??
+      idAccount ??
+      ""
+    ).trim();
+
+  const getTransferDate = (transfer: TransferRecord) =>
+    getDateOnly(
+      transfer.transfer_date ??
+      transfer.transferDate ??
+      transfer.occurredAt ??
+      transfer.created_at ??
+      transfer.createdAt
+    );
+
+  const getTransferFromId = (transfer: TransferRecord) =>
+    String(
+      transfer.from_account_id ??
+      transfer.fromAccountId ??
+      (transfer as any).fromAccount?._id ??
+      (transfer as any).fromAccount?.id ??
+      (transfer as any).fromAccount ??
+      ""
+    ).trim();
+
+  const getTransferToId = (transfer: TransferRecord) =>
+    String(
+      transfer.to_account_id ??
+      transfer.toAccountId ??
+      (transfer as any).toAccount?._id ??
+      (transfer as any).toAccount?.id ??
+      (transfer as any).toAccount ??
+      ""
+    ).trim();
+
+  const matchesTransferRecord = (movement: Movement) => {
+    const movementDate = getOccurredOn(movement);
+    const movementAccountId = getMovementAccountId(movement);
+    const movementAmount = Number(movement.amount);
+
+    if (!movementDate || !Number.isFinite(movementAmount)) return false;
+
+    return transfers.some((transfer) => {
+      const transferAmount = Number(transfer.amount);
+      if (!Number.isFinite(transferAmount)) return false;
+      if (Math.abs(movementAmount) !== Math.abs(transferAmount)) return false;
+      if (getTransferDate(transfer) !== movementDate) return false;
+
+      const fromId = getTransferFromId(transfer);
+      const toId = getTransferToId(transfer);
+
+      if (!movementAccountId) return true;
+      if (movementAmount < 0) return movementAccountId === fromId;
+      if (movementAmount > 0) return movementAccountId === toId;
+
+      return movementAccountId === fromId || movementAccountId === toId;
+    });
+  };
+
+  const getTransferRef = (movement: Movement) =>
+    movement.transferId ??
+    movement.transfer_id ??
+    movement.transfer ??
+    movement.transferMovement ??
+    (movement as any).transferMovementId ??
+    (movement as any).transfer_id;
+
+  const isTransferMovement = (movement: Movement) => {
+    const transferRef = getTransferRef(movement);
+
+    if (transferRef != null) {
+      if (typeof transferRef === "string") {
+        if (transferRef.trim()) return true;
+      } else if (typeof transferRef === "object") {
+        const transferId =
+          (transferRef as any).id ??
+          (transferRef as any)._id ??
+          (transferRef as any).transferId;
+        if (transferId != null && String(transferId).trim()) return true;
+      } else if (Boolean(transferRef)) {
+        return true;
+      }
+    }
+
+    const markers = [
+      movement.source,
+      movement.type,
+      movement.kind,
+      movement.movementType,
+      (movement as any).origin,
+      (movement as any).category,
+    ].map((value) => normalize(value));
+
+    if (markers.some((value) => value === "transfer" || value === "transferencia")) {
+      return true;
+    }
+
+    const textMarkers = [
+      movement.description,
+      movement.comments,
+      (movement as any).comment,
+      movement.subsubcategory?.name,
+    ].map((value) => normalize(value));
+
+    return (
+      textMarkers.some((value) =>
+        value.includes("transferencia") || value.includes("transfer")
+      ) || matchesTransferRecord(movement)
+    );
   };
 
   const queryClient = useQueryClient();
@@ -152,6 +285,10 @@ export const MovementsTableCard = ({
 
   const filteredMovements = useMemo(() => {
     let rows = [...movements];
+
+    if (filters.showTransfers === false) {
+      rows = rows.filter((m) => !isTransferMovement(m));
+    }
 
     if (q) {
       rows = rows.filter((m) =>
@@ -245,7 +382,7 @@ export const MovementsTableCard = ({
     });
 
     return rows;
-  }, [movements, q, filters, sortDir, categories]);
+  }, [movements, q, filters, sortDir, categories, transfers, accountId, idAccount]);
 
   const summary = useMemo(() => {
     let totalIncome = 0;
@@ -443,16 +580,8 @@ export const MovementsTableCard = ({
                       >
                         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                           const movement = filteredMovements[virtualRow.index];
-                          const transferRef =
-                            movement.transferId ??
-                            (movement as any).transferId ??
-                            (movement as any).transfer_id ??
-                            (movement as any).transfer ??
-                            (movement as any).transferMovement;
-                          const isTransfer =
-                            transferRef !== undefined &&
-                            transferRef !== null &&
-                            String(transferRef).trim() !== "";
+                          const transferRef = getTransferRef(movement);
+                          const isTransfer = isTransferMovement(movement);
                           const detailLabel =
                             movement.subsubcategory?.name ??
                             (isTransfer

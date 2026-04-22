@@ -1,6 +1,7 @@
 import type { Company } from "./comany.interface";
+import type { FamilyTotals } from "./account.interface";
 
-export interface Group {
+export interface Group extends FamilyTotals {
     id:       string;
     name:      string;
     balance: number;

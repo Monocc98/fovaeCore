@@ -1,7 +1,11 @@
+import type { FamilyTotals } from "@/types/account.interface";
+
 interface Props {
   balance?: number;
   income?: number;
   expenses?: number;
+  familyTotals?: FamilyTotals | null;
+  includeFamily?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -16,7 +20,20 @@ export const FinancialSummary = ({
   balance = 0,
   income = 0,
   expenses = 0,
+  familyTotals = null,
+  includeFamily = true,
 }: Props) => {
+  const displayBalance = familyTotals
+    ? includeFamily
+      ? familyTotals.totalWithFamily ?? familyTotals.balanceWithFamily ?? balance
+      : familyTotals.totalWithoutFamily ?? familyTotals.balanceWithoutFamily ?? balance - (familyTotals.family ?? 0)
+    : balance;
+
+  const displayExpenses = familyTotals
+    ? includeFamily
+      ? familyTotals.egresosWithFamily ?? expenses
+      : familyTotals.egresosWithoutFamily ?? expenses - (familyTotals.family ?? 0)
+    : expenses;
 
   return (
     <div className="space-y-4">
@@ -24,7 +41,7 @@ export const FinancialSummary = ({
         <div className="flex items-center justify-between">
           <span className="text-sm text-blue-700">Balance Total</span>
           <span className="font-bold text-lg text-blue-900">
-            {formatCurrency(balance)}
+            {formatCurrency(displayBalance)}
           </span>
         </div>
       </div>
@@ -40,7 +57,7 @@ export const FinancialSummary = ({
         <div className="flex items-center justify-between">
           <span className="text-sm text-red-700">Egresos</span>
           <span className="font-bold text-red-900">
-            {formatCurrency(expenses)}
+            {formatCurrency(displayExpenses)}
           </span>
         </div>
       </div>

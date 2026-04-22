@@ -5,14 +5,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useFiscalYears } from "@/budget/hooks/useFiscalYears";
 
-export const DashboardConfig = () => {
+interface Props {
+  includeFamily: boolean;
+  onIncludeFamilyChange: (checked: boolean) => void;
+}
+
+export const DashboardConfig = ({
+  includeFamily,
+  onIncludeFamilyChange,
+}: Props) => {
   const navigate = useNavigate();
   const { groupId, companyId } = useParams<{
     groupId?: string;
@@ -81,7 +89,7 @@ export const DashboardConfig = () => {
             </Select>
           </div>
         </div>
-        {/* Family Switch */}
+
         <div className="flex items-center gap-2">
           <Label
             htmlFor="family-mode"
@@ -89,7 +97,11 @@ export const DashboardConfig = () => {
           >
             Family
           </Label>
-          <Switch id="family-mode" />
+          <Switch
+            id="family-mode"
+            checked={includeFamily}
+            onCheckedChange={onIncludeFamilyChange}
+          />
         </div>
       </div>
     </div>

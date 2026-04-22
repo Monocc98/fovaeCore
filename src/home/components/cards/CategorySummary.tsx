@@ -6,6 +6,8 @@ export interface Summary {
     egresosVariables: number;
     family: number;
     total: number;
+    totalWithFamily?: number;
+    totalWithoutFamily?: number;
     unmappedCount?: number;
 }
 
@@ -18,19 +20,28 @@ export interface SummaryCompany {
 interface Props {
     title?: string;
     summary: Summary;
-    companies?: SummaryCompany[]; // opcional para breakdown
+    companies?: SummaryCompany[];
     showCompaniesBreakdown?: boolean;
+    includeFamily?: boolean;
 }
 
 const pct = (value: number, ingresos: number) =>
     ingresos > 0 ? `${((value / ingresos) * 100).toFixed(1)}%` : "N/A";
 
+const getDisplayTotal = (summary: Summary, includeFamily: boolean) =>
+    includeFamily
+        ? summary.totalWithFamily ?? summary.total
+        : summary.totalWithoutFamily ?? summary.total - summary.family;
+
 export const CategorySummaryTable = ({
-    title = "Resumen por Categorías",
+    title = "Resumen por Categorias",
     summary,
     companies = [],
     showCompaniesBreakdown = false,
+    includeFamily = true,
 }: Props) => {
+    const displayTotal = getDisplayTotal(summary, includeFamily);
+
     const rows = [
         {
             key: "INCOME",
@@ -68,17 +79,17 @@ export const CategorySummaryTable = ({
             value: summary.family,
             percentage: pct(summary.family, summary.ingresos),
         },
-    ] as const;
+    ].filter((row) => includeFamily || row.key !== "FAMILY");
 
-    const totalDot = summary.total >= 0 ? "bg-green-600" : "bg-red-600";
-    const totalText = summary.total >= 0 ? "text-green-600" : "text-red-600";
+    const totalDot = displayTotal >= 0 ? "bg-green-600" : "bg-red-600";
+    const totalText = displayTotal >= 0 ? "text-green-600" : "text-red-600";
 
     return (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
             <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
                 <h2 className="text-xl font-bold text-gray-900">{title}</h2>
                 <p className="text-sm text-gray-600 mt-1">
-                    Clasificación de ingresos y egresos totales
+                    Clasificacion de ingresos y egresos totales
                 </p>
             </div>
 
@@ -86,7 +97,7 @@ export const CategorySummaryTable = ({
                 <table className="w-full">
                     <thead>
                         <tr className="bg-gray-50 border-b border-gray-200">
-                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Categoría</th>
+                            <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Categoria</th>
                             <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Monto</th>
                             <th className="px-6 py-4 text-right text-sm font-semibold text-gray-700">Porcentaje</th>
                         </tr>
@@ -118,10 +129,10 @@ export const CategorySummaryTable = ({
                                 </div>
                             </td>
                             <td className={`px-6 py-4 text-right text-lg ${totalText}`}>
-                                {formatCurrency(summary.total)}
+                                {formatCurrency(displayTotal)}
                             </td>
                             <td className="px-6 py-4 text-right text-sm text-gray-600">
-                                {pct(summary.total, summary.ingresos)}
+                                {pct(displayTotal, summary.ingresos)}
                             </td>
                         </tr>
 
@@ -143,41 +154,47 @@ export const CategorySummaryTable = ({
                     </div>
 
                     <div className="divide-y divide-gray-100">
-                        {companies.map((c) => (
-                            <div key={c._id} className="px-6 py-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <div className="font-semibold text-gray-900">{c.name}</div>
-                                    <div className={`text-sm font-semibold ${c.summary.total >= 0 ? "text-green-600" : "text-red-600"}`}>
-                                        {formatCurrency(c.summary.total)}
-                                    </div>
-                                </div>
+                        {companies.map((c) => {
+                            const companyTotal = getDisplayTotal(c.summary, includeFamily);
 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                    <div>
-                                        <div className="text-gray-500">Ingresos</div>
-                                        <div className="font-semibold text-green-600">{formatCurrency(c.summary.ingresos)}</div>
+                            return (
+                                <div key={c._id} className="px-6 py-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="font-semibold text-gray-900">{c.name}</div>
+                                        <div className={`text-sm font-semibold ${companyTotal >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                            {formatCurrency(companyTotal)}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <div className="text-gray-500">Egresos Fijos</div>
-                                        <div className="font-semibold text-red-600">{formatCurrency(c.summary.egresosFijos)}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-gray-500">Egresos Variables</div>
-                                        <div className="font-semibold text-orange-600">{formatCurrency(c.summary.egresosVariables)}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-gray-500">Family</div>
-                                        <div className="font-semibold text-blue-600">{formatCurrency(c.summary.family)}</div>
-                                    </div>
-                                </div>
 
-                                {!!c.summary.unmappedCount && c.summary.unmappedCount > 0 && (
-                                    <div className="mt-3 text-xs text-yellow-700">
-                                        Movimientos sin bucket: {c.summary.unmappedCount}
+                                    <div className={`grid grid-cols-2 ${includeFamily ? "md:grid-cols-4" : "md:grid-cols-3"} gap-3 text-sm`}>
+                                        <div>
+                                            <div className="text-gray-500">Ingresos</div>
+                                            <div className="font-semibold text-green-600">{formatCurrency(c.summary.ingresos)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-500">Egresos Fijos</div>
+                                            <div className="font-semibold text-red-600">{formatCurrency(c.summary.egresosFijos)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-500">Egresos Variables</div>
+                                            <div className="font-semibold text-orange-600">{formatCurrency(c.summary.egresosVariables)}</div>
+                                        </div>
+                                        {includeFamily && (
+                                            <div>
+                                                <div className="text-gray-500">Family</div>
+                                                <div className="font-semibold text-blue-600">{formatCurrency(c.summary.family)}</div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        ))}
+
+                                    {!!c.summary.unmappedCount && c.summary.unmappedCount > 0 && (
+                                        <div className="mt-3 text-xs text-yellow-700">
+                                            Movimientos sin bucket: {c.summary.unmappedCount}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             )}

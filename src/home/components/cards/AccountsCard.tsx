@@ -7,11 +7,13 @@ type Content = Company | Account;
 interface Props<T extends Content = Content> {
   content?: T[];
   onClick?: (item: T) => void;
+  includeFamily?: boolean;
 }
 
 export const AccountsCard = <T extends Content>({
   content = [],
   onClick,
+  includeFamily = true,
 }: Props<T>) => {
   const getKey = (x: { id?: string; _id?: string; name?: string }, i: number) =>
     x.id ?? (x as any)._id ?? `${i}-${x.name ?? "item"}`;
@@ -47,6 +49,7 @@ export const AccountsCard = <T extends Content>({
           <CompanyCards
             key={getKey(item, i)}
             content={item}
+            includeFamily={includeFamily}
             onClick={() => onClick?.(item as T)}
           />
         ))

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
 import type { Category } from "@/types";
 
@@ -169,6 +170,20 @@ export const FilterCard = ({ value, onChange, categories = [] }: Props) => {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2">
+        <Label
+          htmlFor="show-transfers-filter"
+          className="text-sm font-medium text-gray-700"
+        >
+          Transferencias
+        </Label>
+        <Switch
+          id="show-transfers-filter"
+          checked={value.showTransfers ?? true}
+          onCheckedChange={(checked) => set("showTransfers", checked)}
+        />
       </div>
       {/* 
       <div>

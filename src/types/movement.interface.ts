@@ -13,4 +13,10 @@ export interface Movement {
     tags?:        any[];
     id:          string;
     transferId?: string;
+    transfer_id?: string;
+    transfer?: unknown;
+    transferMovement?: unknown;
+    type?: string;
+    kind?: string;
+    movementType?: string;
 }

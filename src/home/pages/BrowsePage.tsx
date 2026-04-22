@@ -11,7 +11,7 @@ import {
   MovementsTableCard,
 } from "@/home/components/cards";
 import { DashboardConfig } from "@/home/components/DashboardConfig";
-import type { Account } from "@/types/account.interface";
+import type { Account, FamilyTotals } from "@/types/account.interface";
 import type { Company } from "@/types/comany.interface";
 import type { Category } from "@/types";
 import type { MovementsFilters } from "@/types/movements-filters.interface";
@@ -35,9 +35,10 @@ import { PendingProcessesCard } from "../components/cards/PendingProcessCard";
 import { getBucketsSummaryAction, getBudgetVsActualAction } from "../actions/get-home.action";
 import { CategorySummaryTable } from "../components/cards/CategorySummary";
 import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
+import { getTransfersByCompanyAction } from "../actions/transfers.actions";
 
 type Level = "groups" | "companies" | "accounts";
-type Tab = {
+type Tab = FamilyTotals & {
   id: string;
   name: string;
   balance: number;
@@ -45,6 +46,16 @@ type Tab = {
   egresos: number;
   content?: Company[] | Account[];
 };
+
+const getFamilyTotals = (item: FamilyTotals): FamilyTotals => ({
+  balanceWithFamily: item.balanceWithFamily,
+  balanceWithoutFamily: item.balanceWithoutFamily,
+  totalWithFamily: item.totalWithFamily,
+  totalWithoutFamily: item.totalWithoutFamily,
+  egresosWithFamily: item.egresosWithFamily,
+  egresosWithoutFamily: item.egresosWithoutFamily,
+  family: item.family,
+});
 
 export const BrowsePage = () => {
   const navigate = useNavigate();
@@ -78,7 +89,9 @@ export const BrowsePage = () => {
     dateFrom: undefined,
     dateTo: undefined,
     minAmount: undefined,
+    showTransfers: true,
   });
+  const [includeFamily, setIncludeFamily] = useState(true);
 
   const { data: budgetOverlay } = useQuery({
     queryKey: ["budgetOverlay"],
@@ -123,6 +136,7 @@ export const BrowsePage = () => {
         ingresos: g.ingresos,
         egresos: g.egresos,
         content: g.companies,
+        ...getFamilyTotals(g),
       }));
     }
 
@@ -136,6 +150,7 @@ export const BrowsePage = () => {
         ingresos: c.ingresos,
         egresos: c.egresos,
         content: c.accounts,
+        ...getFamilyTotals(c),
       }));
     }
 
@@ -149,6 +164,7 @@ export const BrowsePage = () => {
               balance: a.balance,
               ingresos: a.ingresos,
               egresos: a.egresos,
+              ...getFamilyTotals(a),
             }));
           }
         }
@@ -245,7 +261,10 @@ export const BrowsePage = () => {
           ))}
         </TabsList>
 
-        <DashboardConfig />
+        <DashboardConfig
+          includeFamily={includeFamily}
+          onIncludeFamilyChange={setIncludeFamily}
+        />
         {tabs.map((g) => {
 
           // ===============================
@@ -297,6 +316,7 @@ export const BrowsePage = () => {
                       {/* Pasa las empresas del grupo activo */}
                       <AccountsCard
                         content={g.content}
+                        includeFamily={includeFamily}
                         onClick={(content: any) => {
                           const targetId = content.id ?? content._id;
                           if (level === "groups") {
@@ -322,6 +342,8 @@ export const BrowsePage = () => {
                       balance={g.balance ?? 0}
                       income={g.ingresos ?? 0}
                       expenses={g.egresos ?? 0}
+                      familyTotals={g}
+                      includeFamily={includeFamily}
                     />
                   </InfoCard>
                   <InfoCard
@@ -368,6 +390,7 @@ export const BrowsePage = () => {
                               summary={currentSummaryNode.summary}
                               companies={currentSummaryNode.companies}
                               showCompaniesBreakdown={level === "groups"} // solo en grupos
+                              includeFamily={includeFamily}
                             />
                           ) : (
                             <div className="text-sm text-gray-500">No hay datos para mostrar.</div>
@@ -487,10 +510,20 @@ function AccountsSection({
   onChangeFilters: (f: MovementsFilters) => void;
   categories: Category[];
 }) {
+  const { companyId } = useParams<{ companyId: string }>();
+
   const { data, isLoading } = useQuery({
     queryKey: ["movementsOverlay", accountId],
     queryFn: () => getMovementsAction(accountId),
     enabled: !!accountId,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const { data: transfers = [] } = useQuery({
+    queryKey: ["transfers", companyId],
+    queryFn: () => getTransfersByCompanyAction(companyId!),
+    enabled: !!companyId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -506,6 +539,7 @@ function AccountsSection({
         onChangeFilters={onChangeFilters}
         accountId={accountId}
         categories={categories}
+        transfers={transfers}
       />
     </div>
   );

@@ -2,7 +2,17 @@ export type AccountsResponse = { accounts: Account[] };
 
 export type AccountType = "MOVEMENTS" | "INVESTMENT" | "CASH";
 
-export interface Account {
+export interface FamilyTotals {
+    balanceWithFamily?: number;
+    balanceWithoutFamily?: number;
+    totalWithFamily?: number;
+    totalWithoutFamily?: number;
+    egresosWithFamily?: number;
+    egresosWithoutFamily?: number;
+    family?: number;
+}
+
+export interface Account extends FamilyTotals {
     id:     string;
     name:    string;
     type:    AccountType;

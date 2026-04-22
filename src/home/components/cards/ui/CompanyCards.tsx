@@ -5,6 +5,7 @@ import { DollarSign, TrendingDown, TrendingUp } from "lucide-react";
 interface Props {
   content: Company | Account;
   onClick?: () => void;
+  includeFamily?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -27,24 +28,36 @@ function getBalanceIcon(balance: number) {
   return <DollarSign className="w-4 h-4" />;
 }
 
-export const CompanyCards = ({ content, onClick }: Props) => {
+const getDisplayBalance = (content: Company | Account, includeFamily: boolean) =>
+  includeFamily
+    ? content.balanceWithFamily ?? content.totalWithFamily ?? content.balance
+    : content.balanceWithoutFamily ??
+      content.totalWithoutFamily ??
+      content.balance - (content.family ?? 0);
+
+export const CompanyCards = ({
+  content,
+  onClick,
+  includeFamily = true,
+}: Props) => {
   // const { changeLevelUp } = useHomeStore();
+  const displayBalance = getDisplayBalance(content, includeFamily);
 
   return (
     <div
       key={content.id}
       className={`cursor-pointer flex items-center justify-between p-3 rounded-lg border ${getBalanceColor(
-        content.balance
+        displayBalance
       )}`}
       // onClick={() => changeLevelUp(content._id)}
       onClick={onClick}
     >
       <div className="flex items-center space-x-3">
-        {getBalanceIcon(content.balance)}
+        {getBalanceIcon(displayBalance)}
         <span className="font-medium text-sm">{content.name}</span>
       </div>
       <span className="font-semibold text-sm">
-        {formatCurrency(content.balance)}
+        {formatCurrency(displayBalance)}
       </span>
     </div>
   );
