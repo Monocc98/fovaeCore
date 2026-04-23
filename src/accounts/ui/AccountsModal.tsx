@@ -44,7 +44,7 @@ export const AccountsModal = ({
               type="text"
               value={formData.name}
               onChange={(e) => onChange({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               placeholder="Ej: Banco BBVA Empresarial"
               required
             />
@@ -62,7 +62,7 @@ export const AccountsModal = ({
                   type: e.target.value as typeof formData.type,
                 })
               }
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
               required
             >
               {ACCOUNT_TYPES.map((type) => (
@@ -83,7 +83,7 @@ export const AccountsModal = ({
             </button>
             <button
               type="submit"
-              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 flex items-center justify-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
             >
               <Save className="w-4 h-4" />
               <span>{editing ? "Actualizar" : "Crear"}</span>

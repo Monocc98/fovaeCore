@@ -7,7 +7,7 @@ export const getStatusColor = (status: string) => {
     case "FAILED":
       return "border-red-300 bg-red-50 text-red-800";
     case "PROCESSING":
-      return "border-blue-300 bg-blue-50 text-blue-800";
+      return "border-slate-300 bg-slate-50 text-slate-800";
     default:
       return "border-gray-200 bg-gray-50 text-gray-700";
   }

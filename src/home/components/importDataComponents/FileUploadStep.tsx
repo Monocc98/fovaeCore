@@ -226,8 +226,8 @@ export const FileUploadStep = ({
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-6 py-5 text-center sm:px-8 sm:py-6">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 sm:mb-6 sm:h-16 sm:w-16">
-            <Upload className="h-6 w-6 text-red-500 sm:h-8 sm:w-8" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100 sm:mb-6 sm:h-16 sm:w-16">
+            <Upload className="h-6 w-6 text-primary sm:h-8 sm:w-8" />
           </div>
 
           <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
@@ -273,7 +273,7 @@ export const FileUploadStep = ({
                 <p className="font-medium text-gray-900">{accountName}</p>
               </div>
 
-              <div className="w-fit rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+              <div className="w-fit rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-primary">
                 {source === "SOLUCION_FACTIBLE"
                   ? "Solucion Factible"
                   : "ServoEscolar"}
@@ -282,14 +282,14 @@ export const FileUploadStep = ({
           </div>
 
           {source === "SOLUCION_FACTIBLE" && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-left">
-              <p className="mb-2 text-xs text-blue-700">
+            <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-left">
+              <p className="mb-2 text-xs text-primary">
                 Cuenta para seccion de inversion (opcional)
               </p>
               <select
                 value={investmentAccountId}
                 onChange={(event) => setInvestmentAccountId(event.target.value)}
-                className="w-full rounded-lg border border-blue-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full rounded-lg border border-rose-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={accountsQuery.isLoading}
               >
                 <option value="">No asignar cuenta de inversion</option>
@@ -390,7 +390,7 @@ export const FileUploadStep = ({
           <button
             onClick={handleProcess}
             disabled={!file || loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-3 font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-gray-300"
           >
             {loading ? (
               <>

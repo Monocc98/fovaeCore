@@ -17,12 +17,12 @@ export const ObjectiveGraphButton = () => {
 
   return (
     <button
-      className="w-full flex items-center justify-between p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors border border-amber-100"
+      className="w-full flex items-center justify-between p-3 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200 border-l-4 border-l-teal-500"
       onClick={handleClick}
     >
       <div className="flex items-center space-x-3">
-        <Target className="w-4 h-4 text-amber-700" />
-        <span className="text-sm font-medium text-amber-800">
+        <Target className="w-4 h-4 text-teal-700" />
+        <span className="text-sm font-medium text-teal-900">
           Grafica objetivo
         </span>
       </div>

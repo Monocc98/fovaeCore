@@ -92,6 +92,52 @@ const formatCurrencyPrecise = (value: number) =>
 
 const parseNumber = (value: unknown) => Number(value ?? 0) || 0;
 
+const ExpenseObjectiveSkeleton = () => (
+  <div className="p-8 animate-pulse">
+    <div className="mb-6 flex items-center justify-between">
+      <div>
+        <div className="h-8 w-72 rounded bg-gray-200" />
+        <div className="mt-3 h-4 w-96 rounded bg-gray-100" />
+      </div>
+      <div className="h-10 w-24 rounded-lg bg-gray-200" />
+    </div>
+    <div className="grid gap-6 lg:grid-cols-3">
+      <div className="rounded-xl border bg-white p-5 shadow-sm lg:col-span-2">
+        <div className="mb-5 h-6 w-52 rounded bg-gray-200" />
+        <div className="flex h-72 items-end gap-4 rounded-lg bg-gray-50 p-5">
+          {Array.from({ length: 8 }).map((_, index) => (
+            <div key={index} className="flex flex-1 items-end gap-1">
+              <div className="w-full rounded-t bg-rose-100" style={{ height: `${35 + index * 5}%` }} />
+              <div className="w-full rounded-t bg-red-100" style={{ height: `${55 - index * 3}%` }} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-xl border bg-white p-5 shadow-sm">
+        <div className="mb-5 h-6 w-40 rounded bg-gray-200" />
+        <div className="space-y-4">
+          <div className="h-16 rounded-lg bg-gray-200" />
+          <div className="h-16 rounded-lg bg-gray-100" />
+          <div className="h-16 rounded-lg bg-gray-100" />
+        </div>
+      </div>
+    </div>
+    <div className="mt-6 rounded-xl border bg-white p-5 shadow-sm">
+      <div className="mb-5 h-10 w-full rounded bg-gray-100" />
+      <div className="space-y-3">
+        {Array.from({ length: 7 }).map((_, index) => (
+          <div key={index} className="grid grid-cols-4 gap-4">
+            <div className="h-4 rounded bg-gray-200" />
+            <div className="h-4 rounded bg-gray-100" />
+            <div className="h-4 rounded bg-gray-100" />
+            <div className="h-4 rounded bg-gray-200" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const normalizeNode = (raw: RawNode): TreeNode => {
   const childrenRaw =
     raw.children ?? raw.subcategories ?? raw.subsubcategories ?? raw.categories ?? [];
@@ -375,7 +421,7 @@ export const ExpenseBudgetObjectivePage = () => {
   };
 
   if (query.isLoading) {
-    return <div className="p-8 text-sm text-gray-500">Cargando grafica objetivo...</div>;
+    return <ExpenseObjectiveSkeleton />;
   }
 
   if (query.isError) {
@@ -464,7 +510,7 @@ export const ExpenseBudgetObjectivePage = () => {
           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
             FY: {companyData?.fiscalYear?.name ?? "Ano fiscal actual"}
           </span>
-          <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700">
+          <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-primary">
             Mes: {monthTitle}
           </span>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${summaryState.badge}`}>
@@ -474,7 +520,7 @@ export const ExpenseBudgetObjectivePage = () => {
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <SummaryBox title="Presupuesto" value={summaryBudget} tone="blue" />
-          <SummaryBox title="Gastado" value={summarySpent} tone="red" />
+          <SummaryBox title="Gastado" value={summarySpent} tone="amber" />
           <SummaryBox title="Disponible" value={summaryRemaining} tone={summaryRemaining < 0 ? "red" : "green"} />
         </div>
       </div>
@@ -524,8 +570,8 @@ export const ExpenseBudgetObjectivePage = () => {
                       : "Disponible"
                 }
               />
-              <Bar dataKey="budget" fill="#2563eb" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="spent" fill="#dc2626" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="budget" fill="#0e7490" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="spent" fill="#d97706" radius={[4, 4, 0, 0]} />
               <Bar dataKey="remaining" fill="#059669" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -542,7 +588,7 @@ export const ExpenseBudgetObjectivePage = () => {
                 placeholder="Buscar categoria..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-72 rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-72 rounded-md border border-gray-300 bg-white py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
             <span className="text-xs text-gray-500">{visibleCount} categorias visibles</span>
@@ -603,10 +649,10 @@ export const ExpenseBudgetObjectivePage = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right text-blue-700">
+                    <td className="px-4 py-3 text-right text-cyan-700">
                       {formatCurrencyPrecise(budget)}
                     </td>
-                    <td className="px-4 py-3 text-right text-red-700">
+                    <td className="px-4 py-3 text-right text-amber-700">
                       {formatCurrencyPrecise(spent)}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${status.text}`}>
@@ -663,10 +709,11 @@ const SummaryBox = ({
 }: {
   title: string;
   value: number;
-  tone: "blue" | "red" | "green";
+  tone: "blue" | "amber" | "red" | "green";
 }) => {
   const toneMap = {
-    blue: "bg-blue-50 text-blue-800",
+    blue: "bg-cyan-50 text-cyan-800",
+    amber: "bg-amber-50 text-amber-800",
     red: "bg-red-50 text-red-800",
     green: "bg-emerald-50 text-emerald-800",
   } as const;

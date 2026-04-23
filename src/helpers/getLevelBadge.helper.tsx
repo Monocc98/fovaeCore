@@ -3,7 +3,7 @@ export const getLevelBadge = (level: string) => {
   switch (level) {
     case "category":
       return (
-        <span className={`${baseClasses} bg-purple-100 text-purple-800`}>
+        <span className={`${baseClasses} bg-rose-100 text-primary`}>
           Categoría
         </span>
       );
@@ -15,7 +15,7 @@ export const getLevelBadge = (level: string) => {
       );
     case "subsubcategory":
       return (
-        <span className={`${baseClasses} bg-pink-100 text-pink-800`}>
+        <span className={`${baseClasses} bg-slate-100 text-slate-800`}>
           Detalle
         </span>
       );

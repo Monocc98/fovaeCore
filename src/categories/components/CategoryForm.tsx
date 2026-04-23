@@ -71,7 +71,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         <input
           {...register("name")}
           type="text"
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
         />
       </div>
 
@@ -81,7 +81,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         </label>
         <select
           {...register("level")}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
         >
           <option value="category">Categoría</option>
           <option value="subcategory">Subcategoría</option>
@@ -95,7 +95,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         </label>
         <select
           {...register("scope")}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
         >
           <option value="COMPANY">Empresa</option>
           <option value="ACCOUNT">Cuenta</option>
@@ -109,7 +109,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           </label>
           <select
             {...register("parentId")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
           >
             <option value="">Seleccionar...</option>
             {parentOptions.map((opt) => (
@@ -129,7 +129,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             </label>
             <select
               {...register("type")}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             >
               <option value="">Seleccionar...</option>
               <option value="INCOME">Ingreso</option>
@@ -145,7 +145,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               <select
                 {...register("bucket")}
                 disabled={type === "INCOME"}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <option value="">Seleccionar...</option>
                 {getBucketOptions().map((opt) => (
@@ -168,7 +168,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
         <button
           type="submit"
           disabled={isLoading}
-          className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+          className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
         >
           {editMode ? "Actualizar" : "Agregar"}
         </button>

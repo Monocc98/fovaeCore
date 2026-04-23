@@ -472,7 +472,7 @@ export const MovementsTableCard = ({
                     placeholder="Buscar movimientos..."
                     value={filters.q}
                     onChange={(e) => setFilter("q", e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   />
                 </div>
               </div>
@@ -482,7 +482,7 @@ export const MovementsTableCard = ({
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="text-gray-400 cursor-pointer hover:text-red-800 transition-colors"
+                    className="text-gray-400 cursor-pointer hover:text-primary transition-colors"
                     >
                       <ListPlus className="w-5 h-5" />
                     </button>
@@ -604,7 +604,7 @@ export const MovementsTableCard = ({
                               {/* ✅ también table-fixed + mismas widths */}
                               <table className="w-full table-fixed">
                                 <tbody>
-                                  <tr className="hover:bg-gray-50 transition-colors">
+                                  <tr className={`${isTransfer ? "bg-cyan-50/50 hover:bg-cyan-50" : "hover:bg-gray-50"} transition-colors`}>
                                     <td
                                       className={`px-4 py-4 whitespace-nowrap text-sm text-gray-900 ${COL_DATE}`}
                                     >
@@ -705,8 +705,8 @@ export const MovementsTableCard = ({
                   Total Egresos
                 </p>
                 <div className="flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4 text-red-500" />
-                  <p className="text-lg font-bold text-red-600">
+                  <ArrowUpRight className="w-4 h-4 text-amber-500" />
+                  <p className="text-lg font-bold text-amber-700">
                     -
                     {formatSummaryAmount(summary.totalExpenses)}
                   </p>
@@ -717,10 +717,7 @@ export const MovementsTableCard = ({
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
                   Balance
                 </p>
-                <p
-                  className={`text-lg font-bold ${summary.total >= 0 ? "text-green-600" : "text-red-600"
-                    }`}
-                >
+                <p className="text-lg font-bold text-slate-900">
                   {summary.total >= 0 ? "+" : ""}
                   {formatSummaryAmount(summary.total)}
                 </p>

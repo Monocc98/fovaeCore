@@ -17,12 +17,12 @@ export const BudgetButton = () => {
 
   return (
     <button
-      className="w-full flex items-center justify-between p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+      className="w-full flex items-center justify-between p-3 bg-rose-50 rounded-lg hover:bg-rose-100 transition-colors border border-rose-200 border-l-4 border-l-primary"
       onClick={handleOnCLick}
     >
       <div className="flex items-center space-x-3">
-        <DollarSign className="w-4 h-4 text-purple-600" />
-        <span className="text-sm font-medium text-purple-700">
+        <DollarSign className="w-4 h-4 text-primary" />
+        <span className="text-sm font-medium text-primary">
           Revisar Presupuestos
         </span>
       </div>

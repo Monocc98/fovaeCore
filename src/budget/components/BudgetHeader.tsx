@@ -42,8 +42,8 @@ export const BudgetHeader: React.FC<Props> = ({
           </option>
         ))}
       </select>
-      <div className="px-4 py-2 bg-blue-50 rounded-lg">
-        <span className="text-sm text-blue-700 font-medium">
+      <div className="px-4 py-2 bg-slate-50 rounded-lg border border-slate-200">
+        <span className="text-sm text-slate-800 font-medium">
           Total: {formatCurrency(grandTotal)}
         </span>
       </div>

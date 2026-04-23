@@ -332,7 +332,7 @@ export const MovementsUpsertPage = () => {
             <button
               type="submit"
               //   onClick={handleSaveMovement}
-              className=" cursor-pointer px-6 py-2 bg-blue-800 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+              className=" cursor-pointer px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
             >
               {isEditing ? "Actualizar" : "Guardar"}
             </button>
@@ -359,7 +359,7 @@ export const MovementsUpsertPage = () => {
                       required: true,
                     })}
                     className={cn(
-                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
                       {
                         "border-red-500": errors.occurredAt,
                       }
@@ -382,7 +382,7 @@ export const MovementsUpsertPage = () => {
                     })}
                     placeholder="Describe el movimiento financiero..."
                     className={cn(
-                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
                       {
                         "border-red-500": errors.description,
                       }
@@ -412,7 +412,7 @@ export const MovementsUpsertPage = () => {
                     {...register("comments")}
                     placeholder="Describe el movimiento financiero..."
                     className={cn(
-                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                      "w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
                       {
                         "border-red-500": errors.comments,
                       }
@@ -460,7 +460,7 @@ export const MovementsUpsertPage = () => {
                     <select
                       {...subcategoryReg}
                       disabled={!categoryId || categoriesQuery.isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="">Seleccionar...</option>
                       {subcategories.map((sub) => (
@@ -479,7 +479,7 @@ export const MovementsUpsertPage = () => {
                     <select
                       {...register("subsubcategory")}
                       disabled={!subcategoryId || categoriesQuery.isLoading}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
                     >
                       <option value="">Seleccionar...</option>
                       {subsubcategories.map((leaf) => (
@@ -495,7 +495,7 @@ export const MovementsUpsertPage = () => {
                 {(categoryId ||
                   subcategoryId ||
                   watch("subsubcategory" as any)) && (
-                    <div className="mt-2 p-2 bg-blue-50 rounded text-sm text-blue-700">
+                    <div className="mt-2 p-2 bg-rose-50 rounded text-sm text-primary">
                       <span className="font-medium">Ruta: </span>
                       {parentCategories.find((c) => c._id === categoryId)?.name}
                       {subcategoryId &&
@@ -539,7 +539,7 @@ export const MovementsUpsertPage = () => {
                       onWheel={(e) => (e.currentTarget as HTMLInputElement).blur()}
                       {...amountReg}
                       className={cn(
-                        "w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "w-full pl-8 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
                         {
                           "border-red-500": errors.comments,
                         }
@@ -565,7 +565,7 @@ export const MovementsUpsertPage = () => {
                     //   )
                     // }
 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   >
                     <option value="pending">Pendiente</option>
                     <option value="completed">Completado</option>
@@ -613,15 +613,15 @@ export const MovementsUpsertPage = () => {
                 Acciones Rápidas
               </h3>
               <div className="space-y-3">
-                <button className="w-full flex items-center justify-center space-x-2 p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
-                  <FileText className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-700">
+                <button className="w-full flex items-center justify-center space-x-2 p-3 bg-rose-50 rounded-lg hover:bg-rose-100 transition-colors">
+                  <FileText className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">
                     Adjuntar Documento
                   </span>
                 </button>
-                <button className="w-full flex items-center justify-center space-x-2 p-3 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
-                  <Calculator className="w-4 h-4 text-purple-600" />
-                  <span className="text-sm font-medium text-purple-700">
+                <button className="w-full flex items-center justify-center space-x-2 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                  <Calculator className="w-4 h-4 text-secondary" />
+                  <span className="text-sm font-medium text-secondary">
                     Calcular Impuestos
                   </span>
                 </button>
@@ -649,7 +649,7 @@ export const MovementsUpsertPage = () => {
                     </span>
                   </div>
                   {/* <div className="flex items-center space-x-3">
-                    <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                    <div className="w-2 h-2 bg-slate-400 rounded-full"></div>
                     <span className="text-sm text-gray-600">
                       Estado: {"pending"}
                     </span>

@@ -12,7 +12,7 @@ export const getTransactionColor = (
   amount: number,
   transferRef?: unknown
 ): string => {
-  if (hasTransferRef(transferRef)) return "text-blue-600";
+  if (hasTransferRef(transferRef)) return "text-cyan-700";
   if (amount > 0) return "text-green-600";
   if (amount < 0) return "text-red-600";
   return "text-gray-500";

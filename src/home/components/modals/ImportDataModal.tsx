@@ -233,10 +233,31 @@ export const ImportDataModal = ({
             </button>
           )}
           {resumeBatchId && resumeQuery.isPending ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center px-6">
-              <div className="text-center">
-                <div className="mx-auto mb-4 h-10 w-10 rounded-full border-4 border-gray-200 border-t-red-500 animate-spin" />
-                <p className="text-sm text-gray-600">Cargando proceso pendiente...</p>
+            <div className="min-h-0 flex-1 px-6 py-8 animate-pulse">
+              <div className="mx-auto max-w-3xl space-y-5">
+                <div>
+                  <div className="h-7 w-64 rounded bg-gray-200" />
+                  <div className="mt-3 h-4 w-96 rounded bg-gray-100" />
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-5">
+                  <div className="mb-5 h-5 w-48 rounded bg-gray-200" />
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="h-20 rounded-lg bg-gray-100" />
+                    <div className="h-20 rounded-lg bg-gray-100" />
+                  </div>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-white p-5">
+                  <div className="mb-4 h-5 w-56 rounded bg-gray-200" />
+                  <div className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                      <div key={index} className="grid grid-cols-3 gap-3">
+                        <div className="h-9 rounded bg-gray-100" />
+                        <div className="h-9 rounded bg-gray-100" />
+                        <div className="h-9 rounded bg-gray-200" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           ) : resumeBatchId && resumeQuery.isError ? (

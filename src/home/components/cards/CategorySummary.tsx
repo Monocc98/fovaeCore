@@ -17,6 +17,30 @@ export interface SummaryCompany {
     summary: Summary;
 }
 
+export const CategorySummarySkeleton = () => (
+    <div className="animate-pulse overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="p-6">
+            <div className="mb-4 grid grid-cols-3 gap-4">
+                <div className="h-4 w-28 rounded bg-gray-200" />
+                <div className="h-4 w-20 justify-self-end rounded bg-gray-200" />
+                <div className="h-4 w-20 justify-self-end rounded bg-gray-200" />
+            </div>
+            <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className="grid grid-cols-3 items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="h-3 w-3 rounded-full bg-gray-200" />
+                            <div className="h-4 w-36 rounded bg-gray-200" />
+                        </div>
+                        <div className="h-4 w-24 justify-self-end rounded bg-gray-200" />
+                        <div className="h-4 w-16 justify-self-end rounded bg-gray-200" />
+                    </div>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 interface Props {
     title?: string;
     summary: Summary;
@@ -34,7 +58,6 @@ const getDisplayTotal = (summary: Summary, includeFamily: boolean) =>
         : summary.totalWithoutFamily ?? summary.total - summary.family;
 
 export const CategorySummaryTable = ({
-    title = "Resumen por Categorias",
     summary,
     companies = [],
     showCompaniesBreakdown = false,
@@ -73,26 +96,19 @@ export const CategorySummaryTable = ({
         {
             key: "FAMILY",
             label: "Family",
-            dot: "bg-blue-500",
-            hover: "hover:bg-blue-50",
-            text: "text-blue-600",
+            dot: "bg-slate-500",
+            hover: "hover:bg-slate-50",
+            text: "text-secondary",
             value: summary.family,
             percentage: pct(summary.family, summary.ingresos),
         },
     ].filter((row) => includeFamily || row.key !== "FAMILY");
 
-    const totalDot = displayTotal >= 0 ? "bg-green-600" : "bg-red-600";
-    const totalText = displayTotal >= 0 ? "text-green-600" : "text-red-600";
+    const totalDot = "bg-slate-500";
+    const totalText = "text-slate-900";
 
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
-            <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-4 border-b border-blue-200">
-                <h2 className="text-xl font-bold text-gray-900">{title}</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                    Clasificacion de ingresos y egresos totales
-                </p>
-            </div>
-
+        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
             <div className="overflow-x-auto">
                 <table className="w-full">
                     <thead>
@@ -161,7 +177,7 @@ export const CategorySummaryTable = ({
                                 <div key={c._id} className="px-6 py-4">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="font-semibold text-gray-900">{c.name}</div>
-                                        <div className={`text-sm font-semibold ${companyTotal >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                        <div className="text-sm font-semibold text-slate-900">
                                             {formatCurrency(companyTotal)}
                                         </div>
                                     </div>
@@ -182,7 +198,7 @@ export const CategorySummaryTable = ({
                                         {includeFamily && (
                                             <div>
                                                 <div className="text-gray-500">Family</div>
-                                                <div className="font-semibold text-blue-600">{formatCurrency(c.summary.family)}</div>
+                                                <div className="font-semibold text-secondary">{formatCurrency(c.summary.family)}</div>
                                             </div>
                                         )}
                                     </div>

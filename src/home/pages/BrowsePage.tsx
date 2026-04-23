@@ -3,7 +3,6 @@ import { getMovementsAction } from "@/home/actions/movements.actions";
 import {
   AccountsCard,
   ActionMenu,
-  DistributionCard,
   FilterCard,
   FinancialAnalysis,
   FinancialSummary,
@@ -22,7 +21,6 @@ import {
   Calculator,
   ClipboardClock,
   Filter,
-  PieChart,
   Settings,
   TableProperties,
 } from "lucide-react";
@@ -33,7 +31,7 @@ import { ImportDataModal } from "../components/modals/ImportDataModal";
 import { queryClient } from "@/lib/utils";
 import { PendingProcessesCard } from "../components/cards/PendingProcessCard";
 import { getBucketsSummaryAction, getBudgetVsActualAction } from "../actions/get-home.action";
-import { CategorySummaryTable } from "../components/cards/CategorySummary";
+import { CategorySummarySkeleton, CategorySummaryTable } from "../components/cards/CategorySummary";
 import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
 import { getTransfersByCompanyAction } from "../actions/transfers.actions";
 
@@ -346,23 +344,25 @@ export const BrowsePage = () => {
                       includeFamily={includeFamily}
                     />
                   </InfoCard>
-                  <InfoCard
-                    title="Menú Acciones"
-                    icon={<Settings className="w-5 h-5 text-gray-400" />}
-                  >
-                    <ActionMenu
-                      mode={level}
-                      onImportDataClick={
-                        level === "accounts"
-                          ? () => {
-                            setImportAccount({ id: g.id, name: g.name });
-                            setResumeBatchId(null);
-                            setIsImportOpen(true);
-                          }
-                          : undefined
-                      }
-                    />
-                  </InfoCard>
+                  {level !== "groups" && (
+                    <InfoCard
+                      title="Menu Acciones"
+                      icon={<Settings className="w-5 h-5 text-gray-400" />}
+                    >
+                      <ActionMenu
+                        mode={level}
+                        onImportDataClick={
+                          level === "accounts"
+                            ? () => {
+                              setImportAccount({ id: g.id, name: g.name });
+                              setResumeBatchId(null);
+                              setIsImportOpen(true);
+                            }
+                            : undefined
+                        }
+                      />
+                    </InfoCard>
+                  )}
                 </div>
 
                 {/* Columna central */}
@@ -377,16 +377,15 @@ export const BrowsePage = () => {
                         <FinancialAnalysis rows={budgetNode?.budgetVsActual ?? []} />
                       </InfoCard>
                       <InfoCard
-                        title="Resumen por Categorías"
+                        title={g.id === activeId && currentSummaryNode ? currentSummaryNode.title : "Resumen por Categorias"}
                         icon={<TableProperties className="w-5 h-5 text-gray-400" />}
                         description="Clasificación de ingresos y egresos totales"
                       >
                         {isBucketsLoading ? (
-                          <div className="text-sm text-gray-500">Cargando datos...</div>
+                          <CategorySummarySkeleton />
                         ) : g.id === activeId ? (
                           currentSummaryNode ? (
                             <CategorySummaryTable
-                              title={currentSummaryNode.title}
                               summary={currentSummaryNode.summary}
                               companies={currentSummaryNode.companies}
                               showCompaniesBreakdown={level === "groups"} // solo en grupos
@@ -416,12 +415,15 @@ export const BrowsePage = () => {
                   {level != "accounts" ? (
                     <>
                       <InfoCard
-                        title="Distribución"
-                        icon={<PieChart className="w-5 h-5 text-gray-400" />}
+                        title="Resumen Financiero"
+                        icon={<Calculator className="w-5 h-5 text-gray-400" />}
                       >
-                        <DistributionCard
-                          income={g.ingresos}
-                          expenses={g.egresos}
+                        <FinancialSummary
+                          balance={g.balance ?? 0}
+                          income={g.ingresos ?? 0}
+                          expenses={g.egresos ?? 0}
+                          familyTotals={g}
+                          includeFamily={includeFamily}
                         />
                       </InfoCard>
                     </>

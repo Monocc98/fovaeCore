@@ -33,7 +33,7 @@ const modules = [
 ] as const;
 
 const palette = {
-  blue: "bg-blue-50 border-blue-100 text-blue-900",
+  blue: "bg-slate-50 border-slate-100 text-slate-900",
   amber: "bg-amber-50 border-amber-100 text-amber-900",
   emerald: "bg-emerald-50 border-emerald-100 text-emerald-900",
   rose: "bg-rose-50 border-rose-100 text-rose-900",
@@ -47,26 +47,26 @@ export const AdminCenterPage = () => {
     <div className="min-h-[calc(100vh-73px)] bg-slate-100">
       <div className="mx-auto max-w-7xl px-6 py-8">
         <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 bg-slate-900 px-8 py-8 text-white">
+          <div className="border-b border-rose-200 bg-gradient-to-r from-rose-50 to-slate-100 px-8 py-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
               <div className="max-w-3xl">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-slate-200">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-primary">
                   <Shield className="h-3.5 w-3.5" />
                   SOLO SUPER ADMIN
                 </div>
                 <h1 className="text-3xl font-semibold tracking-tight">Admin Center</h1>
-                <p className="mt-3 text-sm text-slate-300">
+                <p className="mt-3 text-sm text-slate-600">
                   Panel central para operaciones sensibles. El modulo de usuarios ya
                   esta conectado al backend administrativo nuevo.
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-sm text-slate-200">
-                <div className="text-xs uppercase tracking-[0.18em] text-slate-400">
+              <div className="rounded-2xl border border-rose-100 bg-white/70 px-5 py-4 text-sm text-slate-700">
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-500">
                   Sesion Actual
                 </div>
-                <div className="mt-2 font-medium text-white">{user?.name ?? "Super Admin"}</div>
-                <div className="text-slate-300">{user?.email ?? ""}</div>
+                <div className="mt-2 font-medium text-slate-950">{user?.name ?? "Super Admin"}</div>
+                <div className="text-slate-600">{user?.email ?? ""}</div>
               </div>
             </div>
           </div>

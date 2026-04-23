@@ -6,13 +6,26 @@ import {
   type PendingProcess,
 } from "./ui/pendingProcess/ProcessBadge";
 import { getPendingImportBatchesByAccountAction } from "@/home/actions/movements.actions";
-// 👆 si lo dejaste en movements.actions.ts. Si lo separaste, ajusta import.
 
 type Props = {
   accountId: string;
   onProcessClick?: (process: PendingProcess) => void;
   onViewAll?: () => void;
 };
+
+const PendingProcessesSkeleton = () => (
+  <div className="space-y-3 animate-pulse">
+    {Array.from({ length: 3 }).map((_, index) => (
+      <div key={index} className="rounded-lg border border-gray-200 p-3">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="h-4 w-36 rounded bg-gray-200" />
+          <div className="h-5 w-20 rounded-full bg-gray-200" />
+        </div>
+        <div className="h-3 w-28 rounded bg-gray-100" />
+      </div>
+    ))}
+  </div>
+);
 
 export const PendingProcessesCard = ({ accountId, onProcessClick }: Props) => {
   const { data, isLoading, isError } = useQuery({
@@ -29,22 +42,19 @@ export const PendingProcessesCard = ({ accountId, onProcessClick }: Props) => {
 
     return batches.map((b) => ({
       id: b.id,
-      status: b.status === "PENDING" ? "PENDING" : "PROCESSING", // backend regresa PENDING, dejamos fallback
+      status: b.status === "PENDING" ? "PENDING" : "PROCESSING",
       source:
         b.source === "SERVO_ESCOLAR" ? "SERVO_ESCOLAR" : "SOLUCION_FACTIBLE",
       message:
         b.source === "SERVO_ESCOLAR"
-          ? "Importación Servo Escolar pendiente"
-          : "Importación Solución Factible pendiente",
+          ? "Importacion Servo Escolar pendiente"
+          : "Importacion Solucion Factible pendiente",
       count: b.totalRows,
       date: b.createdAt,
     }));
   }, [data]);
 
-  // UI states
-  if (isLoading) {
-    return <div className="text-sm text-gray-500">Cargando procesos…</div>;
-  }
+  if (isLoading) return <PendingProcessesSkeleton />;
 
   if (isError) {
     return (
@@ -60,7 +70,7 @@ export const PendingProcessesCard = ({ accountId, onProcessClick }: Props) => {
         <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
         <p className="text-sm text-gray-600">No hay procesos pendientes</p>
         <p className="text-xs text-gray-500 mt-1">
-          Todos los movimientos están completos
+          Todos los movimientos estan completos
         </p>
       </div>
     );

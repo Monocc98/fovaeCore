@@ -16,12 +16,12 @@ export const AdminCategoriesButton = () => {
 
   return (
     <button
-      className="w-full flex items-center justify-between p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+      className="w-full flex items-center justify-between p-3 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors border border-amber-200 border-l-4 border-l-amber-500"
       onClick={handleOnCLick}
     >
       <div className="flex items-center space-x-3">
-        <LibraryBig className="w-4 h-4 text-blue-600" />
-        <span className="text-sm font-medium text-blue-700">
+        <LibraryBig className="w-4 h-4 text-amber-700" />
+        <span className="text-sm font-medium text-amber-900">
           Administrar Categorías
         </span>
       </div>

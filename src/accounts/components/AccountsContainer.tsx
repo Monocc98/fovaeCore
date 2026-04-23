@@ -14,7 +14,7 @@ type Props = {
 export const AccountsContainer = ({accounts, onCreate, onBack, onEdit, onDelete}: Props) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-blue-50 to-white">
+        <div className="flex items-center justify-between p-6 border-b bg-gradient-to-r from-rose-50 to-white">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
               Administración de Cuentas
@@ -26,7 +26,7 @@ export const AccountsContainer = ({accounts, onCreate, onBack, onEdit, onDelete}
           <div className="flex items-center space-x-3">
             <button
               onClick={onCreate}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
             >
               <Plus className="w-5 h-5" />
               <span>Nueva Cuenta</span>
@@ -52,7 +52,7 @@ export const AccountsContainer = ({accounts, onCreate, onBack, onEdit, onDelete}
               </p>
               <button
                 onClick={onCreate}
-                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-5 h-5" />
                 <span>Agregar Cuenta</span>
@@ -87,7 +87,7 @@ export const AccountsContainer = ({accounts, onCreate, onBack, onEdit, onDelete}
                     <div className="flex space-x-2">
                       <button
                         onClick={() => onEdit(account)}
-                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                        className="flex-1 flex items-center justify-center space-x-1 px-3 py-2 text-sm bg-rose-50 text-primary rounded-lg hover:bg-rose-100 transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
                         <span>Editar</span>

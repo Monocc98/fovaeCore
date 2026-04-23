@@ -256,8 +256,8 @@ export const ConceptMappingStep = ({
         <div className="sticky top-0 z-10 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
           <div className="px-6 py-5 sm:px-8 sm:py-6">
             <div className="mb-4 flex items-center gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-blue-100 sm:h-14 sm:w-14">
-                <ListChecks className="h-6 w-6 text-blue-500 sm:h-7 sm:w-7" />
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 sm:h-14 sm:w-14">
+                <ListChecks className="h-6 w-6 text-primary sm:h-7 sm:w-7" />
               </div>
               <div className="min-w-0">
                 <h2 className="text-xl font-bold text-gray-900 sm:text-2xl">
@@ -280,16 +280,16 @@ export const ConceptMappingStep = ({
                   {uniqueConcepts}
                 </span>
               </div>
-              <div className="rounded-lg bg-blue-100 px-3 py-2 text-sm">
-                <span className="text-blue-700">Asignados:</span>
-                <span className="ml-2 font-bold text-blue-900">
+              <div className="rounded-lg bg-rose-100 px-3 py-2 text-sm">
+                <span className="text-primary">Asignados:</span>
+                <span className="ml-2 font-bold text-primary">
                   {completedCount}/{uniqueConcepts}
                 </span>
               </div>
               {transferCandidatesCount > 0 && (
-                <div className="rounded-lg bg-indigo-100 px-3 py-2 text-sm">
-                  <span className="text-indigo-700">Transferencias:</span>
-                  <span className="ml-2 font-bold text-indigo-900">
+                <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm">
+                  <span className="text-secondary">Transferencias:</span>
+                  <span className="ml-2 font-bold text-secondary">
                     {transferCandidatesCount}
                   </span>
                 </div>
@@ -357,7 +357,7 @@ export const ConceptMappingStep = ({
                 placeholder="Buscar concepto..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               />
             </div>
           </div>
@@ -417,7 +417,7 @@ export const ConceptMappingStep = ({
                       <div>
                         <p className="mb-1 text-xs text-gray-500">Regla previa</p>
                         {concept.existingRule ? (
-                          <div className="inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
+                          <div className="inline-block rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-primary">
                             Regla encontrada
                           </div>
                         ) : (
@@ -441,7 +441,7 @@ export const ConceptMappingStep = ({
                               event.target.value
                             )
                           }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           disabled={loadingCats}
                         >
                           <option value="">
@@ -473,7 +473,7 @@ export const ConceptMappingStep = ({
                               event.target.value
                             )
                           }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           disabled={!mapping.categoryId || loadingCats}
                         >
                           <option value="">
@@ -504,7 +504,7 @@ export const ConceptMappingStep = ({
                               event.target.value
                             )
                           }
-                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                          className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                           disabled={!mapping.subcategoryId || loadingCats}
                         >
                           <option value="">
@@ -559,7 +559,7 @@ export const ConceptMappingStep = ({
             <button
               onClick={handleConfirm}
               disabled={loading}
-              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-red-500 px-4 py-3 font-medium text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:bg-gray-300"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 font-medium text-white transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-gray-300"
             >
               {loading ? (
                 <>

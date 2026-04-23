@@ -27,6 +27,51 @@ function formatCurrency(amount: number): string {
 
 const today = new Date().toISOString().split("T")[0];
 
+const TransfersPageSkeleton = () => (
+    <div className="max-w-7xl mx-auto py-4 animate-pulse">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b bg-rose-50 p-6">
+                <div>
+                    <div className="h-7 w-72 rounded bg-rose-100" />
+                    <div className="mt-3 h-4 w-96 rounded bg-rose-100" />
+                </div>
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-44 rounded-lg bg-rose-100" />
+                    <div className="h-10 w-20 rounded-lg bg-gray-100" />
+                </div>
+            </div>
+            <div className="space-y-6 p-6">
+                <div className="rounded-xl border-2 border-rose-100 bg-rose-50 p-6">
+                    <div className="mb-6 h-6 w-48 rounded bg-rose-100" />
+                    <div className="grid gap-4 md:grid-cols-2">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index}>
+                                <div className="mb-2 h-4 w-28 rounded bg-rose-100" />
+                                <div className="h-10 rounded-md bg-white" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                <div className="rounded-xl border border-gray-200">
+                    <div className="border-b p-4">
+                        <div className="h-6 w-56 rounded bg-gray-200" />
+                    </div>
+                    <div className="divide-y">
+                        {Array.from({ length: 5 }).map((_, index) => (
+                            <div key={index} className="grid grid-cols-4 gap-4 p-4">
+                                <div className="h-4 rounded bg-gray-200" />
+                                <div className="h-4 rounded bg-gray-100" />
+                                <div className="h-4 rounded bg-gray-100" />
+                                <div className="h-4 rounded bg-gray-200" />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
 export const TransfersUpsertPage = () => {
     const { companyId } = useParams<{ companyId: string }>();
     const navigate = useNavigate();
@@ -156,20 +201,13 @@ export const TransfersUpsertPage = () => {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-96">
-                <div className="text-center">
-                    <div className="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-gray-600">Cargando transferencias...</p>
-                </div>
-            </div>
-        );
+        return <TransfersPageSkeleton />;
     }
 
     return (
         <div className="max-w-7xl mx-auto py-4">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div className="flex items-center justify-between p-6 border-b bg-linear-to-r from-blue-50 to-white">
+                <div className="flex items-center justify-between p-6 border-b bg-linear-to-r from-rose-50 to-white">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">
                             Transferencias Entre Cuentas
@@ -182,7 +220,7 @@ export const TransfersUpsertPage = () => {
                         <button
                             type="button"
                             onClick={() => setIsFormVisible(!isFormVisible)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+                            className="flex items-center space-x-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm"
                         >
                             <ArrowRightLeft className="w-5 h-5" />
                             <span>Nueva Transferencia</span>
@@ -199,7 +237,7 @@ export const TransfersUpsertPage = () => {
 
                 <div className="p-6 space-y-6">
                     {isFormVisible && (
-                        <div className="bg-linear-to-br from-blue-50 to-white rounded-xl border-2 border-blue-200 p-6">
+                        <div className="bg-linear-to-br from-rose-50 to-white rounded-xl border-2 border-rose-200 p-6">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-xl font-bold text-gray-900">
                                     Nueva Transferencia
@@ -242,7 +280,7 @@ export const TransfersUpsertPage = () => {
                                                                             : formData.to_account_id,
                                                                 })
                                                             }
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                                             required
                                                         >
                                                             <option value="">Seleccionar cuenta...</option>
@@ -274,7 +312,7 @@ export const TransfersUpsertPage = () => {
                                                                             : formData.from_account_id,
                                                                 })
                                                             }
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                                             required
                                                         >
                                                             <option value="">Seleccionar cuenta...</option>
@@ -310,7 +348,7 @@ export const TransfersUpsertPage = () => {
                                                                         amount: Number(e.target.value) || 0,
                                                                     })
                                                                 }
-                                                                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                                                 placeholder="0.00"
                                                                 required
                                                             />
@@ -330,7 +368,7 @@ export const TransfersUpsertPage = () => {
                                                                     transfer_date: e.target.value,
                                                                 })
                                                             }
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                                                             required
                                                         />
                                                     </div>
@@ -348,7 +386,7 @@ export const TransfersUpsertPage = () => {
                                                                 description: e.target.value,
                                                             })
                                                         }
-                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                                                         rows={3}
                                                         placeholder="Describe el motivo de la transferencia..."
                                                         required
@@ -368,8 +406,8 @@ export const TransfersUpsertPage = () => {
                                             <div className="space-y-4">
                                                 <div className="bg-gray-50 rounded-lg p-4">
                                                     <div className="text-center mb-3">
-                                                        <ArrowRightLeft className="w-8 h-8 text-blue-600 mx-auto mb-2" />
-                                                        <p className="text-2xl font-bold text-blue-600">
+                                                        <ArrowRightLeft className="w-8 h-8 text-cyan-600 mx-auto mb-2" />
+                                                        <p className="text-2xl font-bold text-cyan-700">
                                                             {formatCurrency(formData.amount)}
                                                         </p>
                                                     </div>
@@ -403,7 +441,7 @@ export const TransfersUpsertPage = () => {
                                                 !formData.to_account_id ||
                                                 formData.amount <= 0
                                             }
-                                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+                                            className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
                                         >
                                             <Save className="w-5 h-5" />
                                             <span>Ejecutar Transferencia</span>
@@ -471,7 +509,7 @@ export const TransfersUpsertPage = () => {
                                                             {getAccountName(fromId)}
                                                         </td>
                                                         <td className="px-6 py-4 text-center">
-                                                            <ArrowRightLeft className="w-4 h-4 text-blue-600 mx-auto" />
+                                                            <ArrowRightLeft className="w-4 h-4 text-cyan-600 mx-auto" />
                                                         </td>
                                                         <td className="px-6 py-4 text-sm text-gray-900 font-medium">
                                                             {getAccountName(toId)}
@@ -480,7 +518,7 @@ export const TransfersUpsertPage = () => {
                                                             {transfer.description || "-"}
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
-                                                            <span className="text-sm font-semibold text-blue-600">
+                                                            <span className="text-sm font-semibold text-cyan-700">
                                                                 {formatCurrency(amount)}
                                                             </span>
                                                         </td>

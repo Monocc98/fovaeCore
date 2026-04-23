@@ -13,8 +13,8 @@ const options = [
     title: "Presupuesto vs Egresos",
     description: "Seguimiento mensual por categoria",
     icon: Target,
-    iconClass: "text-amber-700",
-    hoverClass: "focus:bg-amber-50",
+    iconClass: "text-cyan-700",
+    hoverClass: "focus:bg-cyan-50",
   },
 ] as const;
 
@@ -35,14 +35,14 @@ export const GraphDropdownButton = () => {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button className="w-full flex items-center justify-between p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors border border-indigo-100">
+        <button className="w-full flex items-center justify-between p-3 bg-teal-50 rounded-lg hover:bg-teal-100 transition-colors border border-teal-200 border-l-4 border-l-teal-500">
           <div className="flex items-center space-x-3">
-            <BarChart3 className="w-4 h-4 text-indigo-600" />
-            <span className="text-sm font-medium text-indigo-700">
+            <BarChart3 className="w-4 h-4 text-teal-700" />
+            <span className="text-sm font-medium text-teal-900">
               Graficos
             </span>
           </div>
-          <ChevronDown className="w-4 h-4 text-indigo-600" />
+          <ChevronDown className="w-4 h-4 text-teal-700" />
         </button>
       </DropdownMenuTrigger>
 

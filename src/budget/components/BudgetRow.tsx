@@ -108,7 +108,7 @@ export const BudgetRow: React.FC<RowProps> = ({
                         if (e.key === "Enter") onSave();
                         if (e.key === "Escape") onCancel();
                       }}
-                      className="w-24 px-2 py-1 text-sm border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-24 px-2 py-1 text-sm border border-primary rounded focus:outline-none focus:ring-2 focus:ring-primary"
                       autoFocus
                     />
                     <button

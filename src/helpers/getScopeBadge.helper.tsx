@@ -3,7 +3,7 @@ export const getScopeBadge = (scope: string) => {
   switch (scope) {
     case "COMPANY":
       return (
-        <span className={`${baseClasses} bg-blue-100 text-blue-800`}>
+        <span className={`${baseClasses} bg-slate-100 text-slate-800`}>
           Empresa
         </span>
       );

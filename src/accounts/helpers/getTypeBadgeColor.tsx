@@ -3,9 +3,9 @@
       case "CASH":
         return "bg-green-100 text-green-800";
       case "MOVEMENTS":
-        return "bg-blue-100 text-blue-800";
+        return "bg-slate-100 text-slate-800";
       case "INVESTMENT":
-        return "bg-orange-100 text-orange-800";
+        return "bg-rose-100 text-primary";
       default:
         return "bg-gray-100 text-gray-800";
     }

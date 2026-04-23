@@ -143,8 +143,8 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
         <span style={{ color: actualColor, fontWeight: 700 }}>{formatCurrency(row.actual)}</span>
       </div>
 
-      {/* Presupuesto fijo azul */}
-      <div className="mt-1 flex items-center justify-between text-blue-600">
+      {/* Presupuesto fijo */}
+      <div className="mt-1 flex items-center justify-between text-cyan-700">
         <span className="font-medium">Presupuesto</span>
         <span className="font-medium">{formatCurrency(row.budget)}</span>
       </div>
@@ -224,7 +224,7 @@ export const FinancialAnalysis = ({ rows }: { rows: Row[] }) => {
                 <Cell key={`cell-actual-${idx}`} fill={semaforoColor[row._semaforo]} />
               ))}
             </Bar>
-            <Bar dataKey="budget" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="budget" fill="#0e7490" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

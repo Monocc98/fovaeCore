@@ -106,7 +106,7 @@ const normalizeBucket = (bucket?: string | null) => {
     return "FAMILY";
   }
 
-  return normalized;
+  return undefined;
 };
 
 const getBucketLabel = (bucket?: string) => {
@@ -117,6 +117,23 @@ const getBucketLabel = (bucket?: string) => {
   if (normalizedBucket === "VARIABLE_EXPENSE") return "Egreso Variable";
   if (normalizedBucket === "FAMILY") return "Family";
   return null;
+};
+
+const getTypeBadgeClass = (type?: string) => {
+  if (type === "INCOME") return "bg-green-100 text-green-700 border border-green-200";
+  if (type === "EXPENSE") return "bg-red-100 text-red-700 border border-red-200";
+  return "bg-slate-100 text-slate-700 border border-slate-200";
+};
+
+const getBucketBadgeClass = (bucket?: string) => {
+  const normalizedBucket = normalizeBucket(bucket);
+
+  if (normalizedBucket === "INCOME") return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+  if (normalizedBucket === "FIXED_EXPENSE") return "bg-rose-100 text-rose-700 border border-rose-200";
+  if (normalizedBucket === "VARIABLE_EXPENSE") return "bg-orange-100 text-orange-700 border border-orange-200";
+  if (normalizedBucket === "FAMILY") return "bg-slate-100 text-slate-700 border border-slate-200";
+
+  return "bg-yellow-100 text-yellow-700 border border-yellow-200";
 };
 
 const sortBySortIndex = <T extends { sortIndex?: number; name: string }>(items: T[]) =>
@@ -816,7 +833,7 @@ export const CategoriesPage = () => {
             onDragEnd={handleDragEnd}
             className={`flex items-center justify-between gap-4 px-4 py-3 transition-colors ${
               isDropTarget
-                ? "bg-red-50 ring-1 ring-inset ring-red-200"
+                ? "bg-rose-50 ring-1 ring-inset ring-rose-200"
                 : "hover:bg-gray-50"
             } ${isDragging ? "opacity-60" : ""} ${
               isFiltering || reorderMut.isPending ? "cursor-default" : "cursor-move"
@@ -854,17 +871,17 @@ export const CategoriesPage = () => {
                   <span className="font-medium text-gray-900">{row.name}</span>
                   {getLevelBadge(row.level)}
                   {typeLabel && (
-                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${getTypeBadgeClass(row.type)}`}>
                       {typeLabel}
                     </span>
                   )}
                   {bucketLabel && (
-                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${getBucketBadgeClass(normalizedRowBucket)}`}>
                       {bucketLabel}
                     </span>
                   )}
                   {!normalizedRowBucket && row.level === "category" && (
-                    <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-700">
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${getBucketBadgeClass()}`}>
                       Sin clasificar
                     </span>
                   )}
@@ -926,7 +943,7 @@ export const CategoriesPage = () => {
               </button>
               <button
                 onClick={openCreate}
-                className="px-6 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium flex items-center space-x-2"
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Nueva Categoria</span>
@@ -949,7 +966,7 @@ export const CategoriesPage = () => {
                     type="text"
                     {...register("name")}
                     placeholder="Nombre de la categoria..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   />
                 </div>
 
@@ -959,7 +976,7 @@ export const CategoriesPage = () => {
                   </label>
                   <select
                     {...register("level")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                   >
                     <option value="category">Categoria</option>
                     <option value="subcategory">Subcategoria</option>
@@ -976,7 +993,7 @@ export const CategoriesPage = () => {
                         </label>
                         <select
                           {...register("categoryId")}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                         >
                           <option value="">Seleccionar categoria...</option>
                           {catOptions.map((cat) => (
@@ -995,7 +1012,7 @@ export const CategoriesPage = () => {
                       <select
                         {...register("parentId")}
                         disabled={level === "subsubcategory" && !categoryId}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400"
                       >
                         <option value="">
                           {level === "subsubcategory"
@@ -1018,7 +1035,7 @@ export const CategoriesPage = () => {
                       </label>
                       <select
                         {...register("type")}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                       >
                         <option value="">Seleccionar...</option>
                         <option value="INCOME">Ingreso</option>
@@ -1033,7 +1050,7 @@ export const CategoriesPage = () => {
                       <select
                         {...register("bucket")}
                         disabled={!type || type === "INCOME"}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400"
                       >
                         <option value="">Seleccionar...</option>
                         {type === "INCOME" && <option value="INCOME">Ingreso</option>}
@@ -1052,7 +1069,7 @@ export const CategoriesPage = () => {
                 <div className="col-span-2 flex items-end">
                   <button
                     type="submit"
-                    className="w-full px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+                    className="w-full px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     {editingId ? "Actualizar" : "Agregar"}
                   </button>
@@ -1070,7 +1087,7 @@ export const CategoriesPage = () => {
                   placeholder="Buscar categorias..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 />
               </div>
             </div>
@@ -1078,7 +1095,7 @@ export const CategoriesPage = () => {
             <select
               value={catFilter}
               onChange={(e) => onChangeCatFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
             >
               <option value="">Todas las categorias</option>
               {catOptions.map((c) => (
@@ -1092,7 +1109,7 @@ export const CategoriesPage = () => {
               value={subFilter}
               onChange={(e) => setSubFilter(e.target.value)}
               disabled={!catFilter}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:bg-gray-100 disabled:text-gray-400"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400"
             >
               <option value="">Todas las subcategorias</option>
               {subOptions.map((s) => (

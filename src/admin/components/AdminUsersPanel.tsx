@@ -389,7 +389,7 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
               className={[
                 "w-full rounded-2xl border p-4 text-left transition-colors",
                 user.id === selectedUserId
-                  ? "border-slate-900 bg-slate-900 text-white"
+                  ? "border-primary bg-primary text-white"
                   : "border-slate-200 bg-white hover:bg-slate-50",
               ].join(" ")}
             >
@@ -536,8 +536,17 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
           )}
 
           {selectedUserId && permissionsQuery.isLoading && (
-            <div className="mt-4 rounded-2xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
-              Cargando permisos...
+            <div className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 animate-pulse">
+              <div className="h-5 w-44 rounded bg-slate-200" />
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="h-10 rounded bg-white" />
+                <div className="h-10 rounded bg-white" />
+              </div>
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="h-14 rounded-xl bg-white" />
+                ))}
+              </div>
             </div>
           )}
 

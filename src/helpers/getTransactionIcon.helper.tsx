@@ -1,4 +1,4 @@
-import { ArrowUpRight, ArrowDownLeft } from "lucide-react";
+import { ArrowUpRight, ArrowDownLeft, ArrowRightLeft } from "lucide-react";
 
 const hasTransferRef = (transferRef: unknown): boolean => {
   if (transferRef == null) return false;
@@ -12,7 +12,7 @@ const hasTransferRef = (transferRef: unknown): boolean => {
 
 export const getTransactionIcon = (amount: number, transferRef?: unknown) => {
   if (hasTransferRef(transferRef)) {
-    return <ArrowUpRight className="w-4 h-4 text-blue-600" />;
+    return <ArrowRightLeft className="w-4 h-4 text-cyan-600" />;
   }
 
   if (amount > 0) return <ArrowUpRight className="w-4 h-4 text-green-600" />;

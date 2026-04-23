@@ -37,10 +37,10 @@ export const FinancialSummary = ({
 
   return (
     <div className="space-y-4">
-      <div className="bg-blue-50 p-4 rounded-lg">
+      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-blue-700">Balance Total</span>
-          <span className="font-bold text-lg text-blue-900">
+          <span className="text-sm text-slate-600">Balance Total</span>
+          <span className="font-bold text-lg text-slate-900">
             {formatCurrency(displayBalance)}
           </span>
         </div>
@@ -53,10 +53,10 @@ export const FinancialSummary = ({
           </span>
         </div>
       </div>
-      <div className="bg-red-50 p-4 rounded-lg">
+      <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-red-700">Egresos</span>
-          <span className="font-bold text-red-900">
+          <span className="text-sm text-amber-700">Egresos</span>
+          <span className="font-bold text-amber-900">
             {formatCurrency(displayExpenses)}
           </span>
         </div>
