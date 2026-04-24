@@ -309,6 +309,7 @@ export const MovementsTableCard = ({
       filters.subcategoryId ||
       filters.subsubcategoryId
     ) {
+      const categoryMode = filters.categoryMode ?? "include";
       const categoryIndex = new Map<
         string,
         { categoryId?: string; subcategoryId?: string }
@@ -333,7 +334,7 @@ export const MovementsTableCard = ({
           (m as any).subsubcategory ??
           "";
 
-        if (!leafId) return false;
+        if (!leafId) return categoryMode === "exclude";
 
         const indexed = categoryIndex.get(leafId);
         const subcategoryId =
@@ -349,16 +350,16 @@ export const MovementsTableCard = ({
           (m.subsubcategory as any)?.parent?.parent ??
           "";
 
+        let matches = true;
         if (filters.subsubcategoryId) {
-          return leafId === filters.subsubcategoryId;
+          matches = leafId === filters.subsubcategoryId;
+        } else if (filters.subcategoryId) {
+          matches = subcategoryId === filters.subcategoryId;
+        } else if (filters.categoryId) {
+          matches = categoryId === filters.categoryId;
         }
-        if (filters.subcategoryId) {
-          return subcategoryId === filters.subcategoryId;
-        }
-        if (filters.categoryId) {
-          return categoryId === filters.categoryId;
-        }
-        return true;
+
+        return categoryMode === "exclude" ? !matches : matches;
       });
     }
 
@@ -705,8 +706,8 @@ export const MovementsTableCard = ({
                   Total Egresos
                 </p>
                 <div className="flex items-center gap-2">
-                  <ArrowUpRight className="w-4 h-4 text-amber-500" />
-                  <p className="text-lg font-bold text-amber-700">
+                  <ArrowUpRight className="w-4 h-4 text-red-500" />
+                  <p className="text-lg font-bold text-red-600">
                     -
                     {formatSummaryAmount(summary.totalExpenses)}
                   </p>

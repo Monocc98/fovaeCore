@@ -510,7 +510,7 @@ export const ExpenseBudgetObjectivePage = () => {
           <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-700">
             FY: {companyData?.fiscalYear?.name ?? "Ano fiscal actual"}
           </span>
-          <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-medium text-primary">
+          <span className="rounded-full bg-cyan-50 px-3 py-1 text-xs font-medium text-cyan-800">
             Mes: {monthTitle}
           </span>
           <span className={`rounded-full px-3 py-1 text-xs font-semibold ${summaryState.badge}`}>
@@ -520,7 +520,7 @@ export const ExpenseBudgetObjectivePage = () => {
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <SummaryBox title="Presupuesto" value={summaryBudget} tone="blue" />
-          <SummaryBox title="Gastado" value={summarySpent} tone="amber" />
+          <SummaryBox title="Gastado" value={summarySpent} tone="red" />
           <SummaryBox title="Disponible" value={summaryRemaining} tone={summaryRemaining < 0 ? "red" : "green"} />
         </div>
       </div>
@@ -571,7 +571,7 @@ export const ExpenseBudgetObjectivePage = () => {
                 }
               />
               <Bar dataKey="budget" fill="#0e7490" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="spent" fill="#d97706" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="spent" fill="#dc2626" radius={[4, 4, 0, 0]} />
               <Bar dataKey="remaining" fill="#059669" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
@@ -652,7 +652,7 @@ export const ExpenseBudgetObjectivePage = () => {
                     <td className="px-4 py-3 text-right text-cyan-700">
                       {formatCurrencyPrecise(budget)}
                     </td>
-                    <td className="px-4 py-3 text-right text-amber-700">
+                    <td className="px-4 py-3 text-right text-red-700">
                       {formatCurrencyPrecise(spent)}
                     </td>
                     <td className={`px-4 py-3 text-right font-medium ${status.text}`}>

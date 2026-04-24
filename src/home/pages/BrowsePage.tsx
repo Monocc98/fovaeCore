@@ -81,6 +81,7 @@ export const BrowsePage = () => {
     q: "",
     type: "ALL",
     status: "ALL",
+    categoryMode: "include",
     categoryId: undefined,
     subcategoryId: undefined,
     subsubcategoryId: undefined,

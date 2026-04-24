@@ -46,6 +46,9 @@ export const FilterCard = ({ value, onChange, categories = [] }: Props) => {
   const selectedSubcategory =
     subcategories.find((s) => s._id === value.subcategoryId) ?? null;
   const subsubcategories = selectedSubcategory?.subsubcategories ?? [];
+  const hasCategorySelection = Boolean(
+    value.categoryId || value.subcategoryId || value.subsubcategoryId
+  );
 
   return (
     <>
@@ -92,8 +95,28 @@ export const FilterCard = ({ value, onChange, categories = [] }: Props) => {
       </div>
 
       <div>
+        <Label htmlFor="category-mode-filter" className="text-sm font-medium">
+          Categorias
+        </Label>
+        <Select
+          value={value.categoryMode ?? "include"}
+          onValueChange={(v) =>
+            set("categoryMode", v as MovementsFilters["categoryMode"])
+          }
+        >
+          <SelectTrigger id="category-mode-filter">
+            <SelectValue placeholder="Mostrar coincidencias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="include">Mostrar seleccionadas</SelectItem>
+            <SelectItem value="exclude">Excluir seleccionadas</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
         <Label htmlFor="category-filter" className="text-sm font-medium">
-          Categoria
+          Categoria {hasCategorySelection ? `(${value.categoryMode === "exclude" ? "excluir" : "incluir"})` : ""}
         </Label>
         <Select
           value={value.categoryId ?? ALL_VALUE}

@@ -5,7 +5,7 @@ export const MONTHS = [
 
 
 export const levelColors = [
-"bg-rose-50 border-rose-200",
+"bg-cyan-50 border-cyan-200",
 "bg-green-50 border-green-200",
 "bg-yellow-50 border-yellow-200",
 ];

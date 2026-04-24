@@ -53,10 +53,10 @@ export const FinancialSummary = ({
           </span>
         </div>
       </div>
-      <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+      <div className="bg-red-50 p-4 rounded-lg border border-red-100">
         <div className="flex items-center justify-between">
-          <span className="text-sm text-amber-700">Egresos</span>
-          <span className="font-bold text-amber-900">
+          <span className="text-sm text-red-700">Egresos</span>
+          <span className="font-bold text-red-900">
             {formatCurrency(displayExpenses)}
           </span>
         </div>
