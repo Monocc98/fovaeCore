@@ -1,5 +1,6 @@
 import React, { useRef, useState } from "react";
 import { Upload, AlertCircle } from "lucide-react";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 import {
   deleteImportBatchAction,
   importSolucionFactibleAction,
@@ -50,7 +51,7 @@ export const FileUploadStep = ({
   const [source, setSource] = useState<ImportSource>("SOLUCION_FACTIBLE");
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [investmentAccountId, setInvestmentAccountId] = useState("");
   const [detectedSections, setDetectedSections] = useState<string[]>([]);
   const [sectionAccountMap, setSectionAccountMap] = useState<Record<string, string>>({});
@@ -205,18 +206,9 @@ export const FileUploadStep = ({
           ? { INVERSION: investmentAccountId }
           : {}),
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error processing file:", err);
-      const backendData = err?.response?.data;
-      const backendMessage =
-        backendData?.error ||
-        backendData?.message ||
-        backendData?.details ||
-        (Array.isArray(backendData?.errors)
-          ? backendData.errors.join(" ")
-          : null);
-
-      setError(backendMessage || err?.message || "Error al procesar el archivo");
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -369,12 +361,15 @@ export const FileUploadStep = ({
             </div>
           )}
 
-          {error && (
-            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+          {Boolean(error) &&
+            (typeof error === "string" ? (
+              <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            ) : (
+              <FormErrorBanner error={error} />
+            ))}
         </div>
       </div>
 

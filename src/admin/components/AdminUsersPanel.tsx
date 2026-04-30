@@ -34,6 +34,7 @@ import type {
   HomeResponse,
   UpdateAdminUserPermissionsPayload,
 } from "@/types";
+import { getErrorMessage } from "@/helpers";
 
 type Props = { overlay: HomeResponse };
 
@@ -46,13 +47,8 @@ type CompanyOption = {
 
 const PAGE_SIZE = 8;
 
-const errorMessage = (error: unknown, fallback: string) => {
-  const data = (error as any)?.response?.data;
-  if (typeof data === "string") return data;
-  if (typeof data?.error === "string") return data.error;
-  if (typeof data?.message === "string") return data.message;
-  return fallback;
-};
+const errorMessage = (error: unknown, fallback: string) =>
+  getErrorMessage(error, fallback);
 
 const toDraft = (
   response: AdminUserPermissionsResponse

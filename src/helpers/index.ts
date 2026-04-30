@@ -1,4 +1,5 @@
 export * from './formDate.helper'
+export * from './appError.helper'
 export * from './formatCurrency.helper'
 export * from './getTransactionColor.helper'
 export * from './getTransactionIcon.helper'

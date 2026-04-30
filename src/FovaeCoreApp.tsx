@@ -7,8 +7,13 @@ import { useEffect, type PropsWithChildren } from "react";
 import { CustomFullscreenLoading } from "./components/custom/CustomFullscreenLoading";
 import { useAuthStore } from "./auth/store/auth.store";
 import { queryClient } from "@/lib/utils";
+import { getErrorMessage, isAppError } from "@/helpers";
 
 const isDisabledSessionPayload = (payload: unknown): boolean => {
+  if (isAppError(payload)) {
+    return payload.code === "USER_DISABLED";
+  }
+
   if (typeof payload === "string") {
     return payload.toLowerCase().includes("disabled");
   }
@@ -34,6 +39,8 @@ const CheckAuthProvider = ({ children }: PropsWithChildren) => {
 
       if (isDisabledSessionPayload(detail)) {
         toast.error("Tu usuario fue desactivado.");
+      } else if (isAppError(detail)) {
+        toast.error(getErrorMessage(detail));
       }
 
       invalidateSession();

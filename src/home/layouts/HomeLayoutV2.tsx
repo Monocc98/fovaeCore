@@ -1,4 +1,5 @@
 import { useAuthStore } from "@/auth/store/auth.store";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { getHomeAction } from "@/home/actions/get-home.action";
 import { HeaderHome } from "@/home/components/HeaderHome";
 import { useQuery } from "@tanstack/react-query";
@@ -70,6 +71,8 @@ export const HomeLayoutV2 = () => {
     data: overlay,
     isLoading,
     isError,
+    error,
+    refetch,
   } = useQuery({
     queryKey: ["homeOverlay", userId],
     queryFn: () => getHomeAction(),
@@ -82,7 +85,15 @@ export const HomeLayoutV2 = () => {
       <HeaderHome />
       {isLoading && <HomeDashboardSkeleton />}
       {isError && (
-        <div className="p-6 text-red-600 text-sm">Error al cargar.</div>
+        <div className="p-6">
+          <QueryErrorState
+            error={error}
+            onRetry={() => {
+              void refetch();
+            }}
+            title="No se pudo cargar el dashboard"
+          />
+        </div>
       )}
       {overlay && <Outlet context={{ overlay } satisfies OutletContext} />}
     </div>

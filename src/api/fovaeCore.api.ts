@@ -1,6 +1,7 @@
 import axios from "axios";
 import type { CsrfPayload } from "@/types";
 import type { AxiosRequestConfig } from "axios";
+import { isAppError, parseAxiosError } from "@/helpers";
 
 const BASE_URL = import.meta.env.VITE_API_URL;
 const DEFAULT_CSRF_HEADER = "x-csrf-token";
@@ -141,12 +142,19 @@ fovaeCoreApi.interceptors.request.use((config) => {
 fovaeCoreApi.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const status = error?.response?.status;
+    const appError = parseAxiosError(error);
+    const status = appError.status;
     const request = error?.config as RetriableRequestConfig | undefined;
     const requestUrl = request?.url;
     const isAuthRequest = isAuthRoute(requestUrl);
 
-    if (status === 401 && request && !request._retry && !isAuthRequest) {
+    if (
+      status === 401 &&
+      request &&
+      !request._retry &&
+      !isAuthRequest &&
+      (appError.code === "UNAUTHORIZED" || appError.code === "SESSION_EXPIRED")
+    ) {
       request._retry = true;
 
       try {
@@ -158,18 +166,19 @@ fovaeCoreApi.interceptors.response.use(
 
         await renewInFlight;
         return fovaeCoreApi(request);
-      } catch (renewError: any) {
+      } catch (renewError) {
+        const normalizedRenewError = parseAxiosError(renewError);
         clearCsrfState();
-        dispatchUnauthorized(renewError?.response?.data?.error ?? null);
-        return Promise.reject(renewError);
+        dispatchUnauthorized(normalizedRenewError);
+        return Promise.reject(normalizedRenewError);
       }
     }
 
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       clearCsrfState();
-      dispatchUnauthorized(error?.response?.data?.error ?? null);
+      dispatchUnauthorized(appError);
     }
 
-    return Promise.reject(error);
+    return Promise.reject(isAppError(error) ? error : appError);
   }
 );

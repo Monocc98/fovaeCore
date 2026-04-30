@@ -59,6 +59,7 @@ export const DeleteMovementAlert = ({
         <div className="flex space-x-3">
           <button
             onClick={onCancel}
+            disabled={isLoading}
             className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium"
           >
             Cancelar

@@ -23,6 +23,12 @@ export const FinancialSummary = ({
   familyTotals = null,
   includeFamily = true,
 }: Props) => {
+  const displayIncome = familyTotals
+    ? includeFamily
+      ? income
+      : familyTotals.ingresosWithoutFamily ?? income - (familyTotals.incomeFamily ?? 0)
+    : income;
+
   const displayBalance = familyTotals
     ? includeFamily
       ? familyTotals.totalWithFamily ?? familyTotals.balanceWithFamily ?? balance
@@ -49,7 +55,7 @@ export const FinancialSummary = ({
         <div className="flex items-center justify-between">
           <span className="text-sm text-green-700">Ingresos</span>
           <span className="font-bold text-green-900">
-            {formatCurrency(income)}
+            {formatCurrency(displayIncome)}
           </span>
         </div>
       </div>

@@ -50,6 +50,8 @@ const getFamilyTotals = (item: FamilyTotals): FamilyTotals => ({
   balanceWithoutFamily: item.balanceWithoutFamily,
   totalWithFamily: item.totalWithFamily,
   totalWithoutFamily: item.totalWithoutFamily,
+  ingresosWithoutFamily: item.ingresosWithoutFamily,
+  incomeFamily: item.incomeFamily,
   egresosWithFamily: item.egresosWithFamily,
   egresosWithoutFamily: item.egresosWithoutFamily,
   family: item.family,
@@ -406,6 +408,7 @@ export const BrowsePage = () => {
                         filters={filters}
                         onChangeFilters={setFilters}
                         categories={categories}
+                        includeFamily={includeFamily}
                       />
                     )
                   )}
@@ -507,11 +510,13 @@ function AccountsSection({
   filters,
   onChangeFilters,
   categories,
+  includeFamily,
 }: {
   accountId: string;
   filters: MovementsFilters;
   onChangeFilters: (f: MovementsFilters) => void;
   categories: Category[];
+  includeFamily: boolean;
 }) {
   const { companyId } = useParams<{ companyId: string }>();
 
@@ -543,6 +548,7 @@ function AccountsSection({
         accountId={accountId}
         categories={categories}
         transfers={transfers}
+        includeFamily={includeFamily}
       />
     </div>
   );

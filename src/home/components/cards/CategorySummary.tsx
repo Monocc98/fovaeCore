@@ -2,8 +2,11 @@ import { formatCurrency } from "@/helpers";
 
 export interface Summary {
     ingresos: number;
+    ingresosWithoutFamily?: number;
+    incomeFamily?: number;
     egresosFijos: number;
     egresosVariables: number;
+    utilidades?: number;
     family: number;
     total: number;
     totalWithFamily?: number;
@@ -52,6 +55,11 @@ interface Props {
 const pct = (value: number, ingresos: number) =>
     ingresos > 0 ? `${((value / ingresos) * 100).toFixed(1)}%` : "N/A";
 
+const getDisplayIncome = (summary: Summary, includeFamily: boolean) =>
+    includeFamily
+        ? summary.ingresos
+        : summary.ingresosWithoutFamily ?? summary.ingresos - (summary.incomeFamily ?? 0);
+
 const getDisplayTotal = (summary: Summary, includeFamily: boolean) =>
     includeFamily
         ? summary.totalWithFamily ?? summary.total
@@ -63,6 +71,7 @@ export const CategorySummaryTable = ({
     showCompaniesBreakdown = false,
     includeFamily = true,
 }: Props) => {
+    const displayIncome = getDisplayIncome(summary, includeFamily);
     const displayTotal = getDisplayTotal(summary, includeFamily);
 
     const rows = [
@@ -72,7 +81,7 @@ export const CategorySummaryTable = ({
             dot: "bg-green-500",
             hover: "hover:bg-green-50",
             text: "text-green-600",
-            value: summary.ingresos,
+            value: displayIncome,
             percentage: "100%",
         },
         {
@@ -82,7 +91,7 @@ export const CategorySummaryTable = ({
             hover: "hover:bg-red-50",
             text: "text-red-600",
             value: summary.egresosFijos,
-            percentage: pct(summary.egresosFijos, summary.ingresos),
+            percentage: pct(summary.egresosFijos, displayIncome),
         },
         {
             key: "VARIABLE_EXPENSE",
@@ -91,7 +100,16 @@ export const CategorySummaryTable = ({
             hover: "hover:bg-orange-50",
             text: "text-orange-600",
             value: summary.egresosVariables,
-            percentage: pct(summary.egresosVariables, summary.ingresos),
+            percentage: pct(summary.egresosVariables, displayIncome),
+        },
+        {
+            key: "UTILITY",
+            label: "Utilidades",
+            dot: "bg-cyan-500",
+            hover: "hover:bg-cyan-50",
+            text: "text-cyan-700",
+            value: summary.utilidades ?? 0,
+            percentage: pct(summary.utilidades ?? 0, displayIncome),
         },
         {
             key: "FAMILY",
@@ -100,7 +118,7 @@ export const CategorySummaryTable = ({
             hover: "hover:bg-slate-50",
             text: "text-secondary",
             value: summary.family,
-            percentage: pct(summary.family, summary.ingresos),
+            percentage: pct(summary.family, displayIncome),
         },
     ].filter((row) => includeFamily || row.key !== "FAMILY");
 
@@ -148,7 +166,7 @@ export const CategorySummaryTable = ({
                                 {formatCurrency(displayTotal)}
                             </td>
                             <td className="px-6 py-4 text-right text-sm text-gray-600">
-                                {pct(displayTotal, summary.ingresos)}
+                                {pct(displayTotal, displayIncome)}
                             </td>
                         </tr>
 
@@ -182,10 +200,10 @@ export const CategorySummaryTable = ({
                                         </div>
                                     </div>
 
-                                    <div className={`grid grid-cols-2 ${includeFamily ? "md:grid-cols-4" : "md:grid-cols-3"} gap-3 text-sm`}>
+                                    <div className={`grid grid-cols-2 ${includeFamily ? "md:grid-cols-5" : "md:grid-cols-4"} gap-3 text-sm`}>
                                         <div>
                                             <div className="text-gray-500">Ingresos</div>
-                                            <div className="font-semibold text-green-600">{formatCurrency(c.summary.ingresos)}</div>
+                                            <div className="font-semibold text-green-600">{formatCurrency(getDisplayIncome(c.summary, includeFamily))}</div>
                                         </div>
                                         <div>
                                             <div className="text-gray-500">Egresos Fijos</div>
@@ -194,6 +212,10 @@ export const CategorySummaryTable = ({
                                         <div>
                                             <div className="text-gray-500">Egresos Variables</div>
                                             <div className="font-semibold text-orange-600">{formatCurrency(c.summary.egresosVariables)}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-gray-500">Utilidades</div>
+                                            <div className="font-semibold text-cyan-700">{formatCurrency(c.summary.utilidades ?? 0)}</div>
                                         </div>
                                         {includeFamily && (
                                             <div>

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle } from "lucide-react";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import {
   ProcessBadge,
   type PendingProcess,
@@ -28,7 +29,7 @@ const PendingProcessesSkeleton = () => (
 );
 
 export const PendingProcessesCard = ({ accountId, onProcessClick }: Props) => {
-  const { data, isLoading, isError } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["pendingImportBatches", accountId],
     queryFn: () => getPendingImportBatchesByAccountAction(accountId),
     enabled: !!accountId,
@@ -57,11 +58,7 @@ export const PendingProcessesCard = ({ accountId, onProcessClick }: Props) => {
   if (isLoading) return <PendingProcessesSkeleton />;
 
   if (isError) {
-    return (
-      <div className="text-sm text-red-600">
-        No se pudieron cargar los procesos.
-      </div>
-    );
+    return <QueryErrorState error={error} onRetry={() => void refetch()} title="No se pudieron cargar los procesos" />;
   }
 
   if (processes.length === 0) {

@@ -45,7 +45,10 @@ interface Props {
   accountId?: string;
   categories?: Category[];
   transfers?: TransferRecord[];
+  includeFamily?: boolean;
 }
+
+const INCOME_FAMILY_CATEGORY_ID = "69efb5ed40a294d3c5d820e6";
 
 export const MovementsTableCard = ({
   movements = [],
@@ -55,6 +58,7 @@ export const MovementsTableCard = ({
   accountId,
   categories = [],
   transfers = [],
+  includeFamily = true,
 }: Props) => {
   const [movementToDelete, setMovementToDelete] = useState<Movement | null>(
     null
@@ -266,11 +270,19 @@ export const MovementsTableCard = ({
         queryClient.setQueryData(["movementsOverlay", ctx.accountId], ctx.prev);
     },
 
-    onSettled: async (_data, _err, vars) => {
-      await queryClient.invalidateQueries({
+    onSettled: (_data, _err, vars) => {
+      void queryClient.invalidateQueries({
         queryKey: ["movementsOverlay", vars.accountId],
+        refetchType: "active",
       });
-      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+      void queryClient.invalidateQueries({
+        queryKey: ["homeOverlay"],
+        refetchType: "active",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["homeBucketsSummary"],
+        refetchType: "active",
+      });
       setMovementToDelete(null);
     },
   });
@@ -283,8 +295,81 @@ export const MovementsTableCard = ({
   const deferredQ = useDeferredValue(filters.q);
   const q = normalize(deferredQ);
 
+  const categoryIndex = useMemo(() => {
+    const leafMap = new Map<
+      string,
+      { categoryId?: string; subcategoryId?: string; categoryBucket?: string; categoryType?: string }
+    >();
+
+    categories.forEach((cat) => {
+      cat.subcategories?.forEach((sub) => {
+        sub.subsubcategories?.forEach((leaf) => {
+          leafMap.set(leaf._id, {
+            categoryId: cat._id,
+            subcategoryId: sub._id,
+            categoryBucket: cat.bucket,
+            categoryType: cat.type,
+          });
+        });
+      });
+    });
+
+    return leafMap;
+  }, [categories]);
+
+  const getMovementCategoryMeta = (movement: Movement) => {
+    const leafId =
+      (movement.subsubcategory as any)?._id ??
+      (movement.subsubcategory as any)?.id ??
+      (movement as any).subsubcategoryId ??
+      (movement as any).subsubcategory ??
+      "";
+
+    const indexed = leafId ? categoryIndex.get(String(leafId)) : undefined;
+
+    return {
+      leafId: String(leafId ?? ""),
+      subcategoryId:
+        indexed?.subcategoryId ??
+        (movement.subsubcategory as any)?.parent?._id ??
+        (movement.subsubcategory as any)?.parent?.id ??
+        (movement.subsubcategory as any)?.parent ??
+        "",
+      categoryId:
+        indexed?.categoryId ??
+        (movement.subsubcategory as any)?.parent?.parent?._id ??
+        (movement.subsubcategory as any)?.parent?.parent?.id ??
+        (movement.subsubcategory as any)?.parent?.parent ??
+        "",
+      categoryBucket:
+        indexed?.categoryBucket ??
+        (movement.subsubcategory as any)?.parent?.parent?.bucket ??
+        "",
+      categoryType:
+        indexed?.categoryType ??
+        (movement.subsubcategory as any)?.parent?.parent?.type ??
+        "",
+    };
+  };
+
+  const isExcludedByFamilySwitch = (movement: Movement) => {
+    const meta = getMovementCategoryMeta(movement);
+    const normalizedBucket = normalize(meta.categoryBucket);
+    const normalizedType = normalize(meta.categoryType);
+
+    return (
+      normalizedBucket === "family" ||
+      String(meta.categoryId) === INCOME_FAMILY_CATEGORY_ID ||
+      (normalizedType === "income" && String(meta.categoryId) === INCOME_FAMILY_CATEGORY_ID)
+    );
+  };
+
   const filteredMovements = useMemo(() => {
     let rows = [...movements];
+
+    if (!includeFamily) {
+      rows = rows.filter((m) => !isExcludedByFamilySwitch(m));
+    }
 
     if (filters.showTransfers === false) {
       rows = rows.filter((m) => !isTransferMovement(m));
@@ -310,45 +395,11 @@ export const MovementsTableCard = ({
       filters.subsubcategoryId
     ) {
       const categoryMode = filters.categoryMode ?? "include";
-      const categoryIndex = new Map<
-        string,
-        { categoryId?: string; subcategoryId?: string }
-      >();
-
-      categories.forEach((cat) => {
-        cat.subcategories?.forEach((sub) => {
-          sub.subsubcategories?.forEach((leaf) => {
-            categoryIndex.set(leaf._id, {
-              categoryId: cat._id,
-              subcategoryId: sub._id,
-            });
-          });
-        });
-      });
 
       rows = rows.filter((m) => {
-        const leafId =
-          (m.subsubcategory as any)?._id ??
-          (m.subsubcategory as any)?.id ??
-          (m as any).subsubcategoryId ??
-          (m as any).subsubcategory ??
-          "";
+        const { leafId, subcategoryId, categoryId } = getMovementCategoryMeta(m);
 
         if (!leafId) return categoryMode === "exclude";
-
-        const indexed = categoryIndex.get(leafId);
-        const subcategoryId =
-          indexed?.subcategoryId ??
-          (m.subsubcategory as any)?.parent?._id ??
-          (m.subsubcategory as any)?.parent?.id ??
-          (m.subsubcategory as any)?.parent ??
-          "";
-        const categoryId =
-          indexed?.categoryId ??
-          (m.subsubcategory as any)?.parent?.parent?._id ??
-          (m.subsubcategory as any)?.parent?.parent?.id ??
-          (m.subsubcategory as any)?.parent?.parent ??
-          "";
 
         let matches = true;
         if (filters.subsubcategoryId) {
@@ -383,7 +434,7 @@ export const MovementsTableCard = ({
     });
 
     return rows;
-  }, [movements, q, filters, sortDir, categories, transfers, accountId, idAccount]);
+  }, [movements, q, filters, sortDir, categories, transfers, accountId, idAccount, includeFamily, categoryIndex]);
 
   const summary = useMemo(() => {
     let totalIncome = 0;

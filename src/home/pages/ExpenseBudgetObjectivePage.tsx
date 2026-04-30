@@ -13,6 +13,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 
 type MonthRow = {
   fiscalPos?: number;
@@ -427,9 +428,11 @@ export const ExpenseBudgetObjectivePage = () => {
   if (query.isError) {
     return (
       <div className="p-8">
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700">
-          No se pudo cargar la grafica objetivo.
-        </div>
+        <QueryErrorState
+          error={query.error}
+          onRetry={() => void query.refetch()}
+          title="No se pudo cargar la grafica objetivo"
+        />
       </div>
     );
   }

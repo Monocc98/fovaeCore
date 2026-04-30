@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import type { Account, AccountsResponse, AccountType } from "@/types";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   createAccountAction,
   deleteAccountAction,
@@ -9,6 +10,7 @@ import {
   updateAccountAction,
 } from "@/accounts/actions/acounts.actions";
 import { CustomFullscreenLoading } from "@/components/custom/CustomFullscreenLoading";
+import { getErrorMessage } from "@/helpers";
 import { AccountsContainer } from "../components/AccountsContainer";
 import { AccountsModal } from "../ui/AccountsModal";
 
@@ -56,6 +58,9 @@ export const AccountsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["accounts", companyId] });
       closeModal();
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo crear la cuenta."));
+    },
   });
 
   const updateMut = useMutation({
@@ -69,12 +74,18 @@ export const AccountsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["accounts", companyId] });
       closeModal();
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo actualizar la cuenta."));
+    },
   });
 
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteAccountAction(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts", companyId] });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo eliminar la cuenta."));
     },
   });
 
@@ -120,7 +131,7 @@ export const AccountsPage = () => {
 
   if (accountsQuery.isError) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="mx-auto max-w-3xl p-6">
         <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-2xl">⚠️</span>

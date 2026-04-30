@@ -7,6 +7,8 @@ export interface FamilyTotals {
     balanceWithoutFamily?: number;
     totalWithFamily?: number;
     totalWithoutFamily?: number;
+    ingresosWithoutFamily?: number;
+    incomeFamily?: number;
     egresosWithFamily?: number;
     egresosWithoutFamily?: number;
     family?: number;

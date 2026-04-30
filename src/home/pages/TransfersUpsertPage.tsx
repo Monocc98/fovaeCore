@@ -4,10 +4,14 @@ import {
     getTransfersByCompanyAction,
     type TransferRecord,
 } from "@/home/actions/transfers.actions";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
+import { getErrorMessage, getFieldErrors } from "@/helpers";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, Save, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
+import { toast } from "sonner";
 
 type FormData = {
     from_account_id: string;
@@ -81,6 +85,8 @@ export const TransfersUpsertPage = () => {
     const backTo = (location.state as any)?.state?.backTo as string | null;
 
     const [isFormVisible, setIsFormVisible] = useState(true);
+    const [submitError, setSubmitError] = useState<unknown>(null);
+    const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
     const [formData, setFormData] = useState<FormData>({
         from_account_id: "",
         to_account_id: "",
@@ -111,19 +117,23 @@ export const TransfersUpsertPage = () => {
 
     const createTransferMut = useMutation({
         mutationFn: createTransferAction,
-        onSuccess: async () => {
-            await queryClient.invalidateQueries({ queryKey: ["transfers", companyId] });
-            await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
-            await queryClient.invalidateQueries({ queryKey: ["accounts", companyId] });
+        onSuccess: () => {
+            setSubmitError(null);
+            setFieldErrors({});
+            void queryClient.invalidateQueries({ queryKey: ["transfers", companyId], refetchType: "active" });
+            void queryClient.invalidateQueries({ queryKey: ["homeOverlay"], refetchType: "active" });
+            void queryClient.invalidateQueries({ queryKey: ["homeBucketsSummary"], refetchType: "active" });
+            void queryClient.invalidateQueries({ queryKey: ["accounts", companyId], refetchType: "active" });
             resetForm();
             setIsFormVisible(false);
         },
-        onError: (error: any) => {
-            const msg =
-                error?.response?.data?.message ||
-                error?.message ||
-                "Error al crear la transferencia";
-            window.alert(msg);
+        onError: (error) => {
+            const nextFieldErrors = getFieldErrors(error);
+            setFieldErrors(nextFieldErrors);
+            setSubmitError(error);
+            if (Object.keys(nextFieldErrors).length === 0) {
+                toast.error(getErrorMessage(error, "No se pudo crear la transferencia."));
+            }
         },
     });
 
@@ -180,14 +190,19 @@ export const TransfersUpsertPage = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setSubmitError(null);
+        setFieldErrors({});
 
         if (formData.from_account_id === formData.to_account_id) {
-            window.alert("La cuenta origen y destino no pueden ser la misma");
+            setFieldErrors({
+                from_account_id: "La cuenta origen y destino no pueden ser la misma",
+                to_account_id: "La cuenta origen y destino no pueden ser la misma",
+            });
             return;
         }
 
         if (formData.amount <= 0) {
-            window.alert("El monto debe ser mayor a 0");
+            setFieldErrors({ amount: "El monto debe ser mayor a 0" });
             return;
         }
 
@@ -202,6 +217,30 @@ export const TransfersUpsertPage = () => {
 
     if (isLoading) {
         return <TransfersPageSkeleton />;
+    }
+
+    if (accountsQuery.isError) {
+        return (
+            <div className="max-w-7xl mx-auto py-4">
+                <QueryErrorState
+                    error={accountsQuery.error}
+                    onRetry={() => void accountsQuery.refetch()}
+                    title="No se pudieron cargar las cuentas"
+                />
+            </div>
+        );
+    }
+
+    if (transfersQuery.isError) {
+        return (
+            <div className="max-w-7xl mx-auto py-4">
+                <QueryErrorState
+                    error={transfersQuery.error}
+                    onRetry={() => void transfersQuery.refetch()}
+                    title="No se pudieron cargar las transferencias"
+                />
+            </div>
+        );
     }
 
     return (
@@ -255,6 +294,7 @@ export const TransfersUpsertPage = () => {
                             </div>
 
                             <form onSubmit={handleSubmit}>
+                                <FormErrorBanner error={submitError} className="mb-4" />
                                 <div className="grid grid-cols-12 gap-6">
                                     <div className="col-span-8 space-y-6">
                                         <div className="bg-white rounded-lg p-6 border border-gray-200">
@@ -294,6 +334,9 @@ export const TransfersUpsertPage = () => {
                                                                 </option>
                                                             ))}
                                                         </select>
+                                                        {fieldErrors.from_account_id && (
+                                                            <p className="mt-2 text-sm text-red-600">{fieldErrors.from_account_id}</p>
+                                                        )}
                                                     </div>
 
                                                     <div>
@@ -326,6 +369,9 @@ export const TransfersUpsertPage = () => {
                                                                 </option>
                                                             ))}
                                                         </select>
+                                                        {fieldErrors.to_account_id && (
+                                                            <p className="mt-2 text-sm text-red-600">{fieldErrors.to_account_id}</p>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -353,6 +399,9 @@ export const TransfersUpsertPage = () => {
                                                                 required
                                                             />
                                                         </div>
+                                                        {fieldErrors.amount && (
+                                                            <p className="mt-2 text-sm text-red-600">{fieldErrors.amount}</p>
+                                                        )}
                                                     </div>
 
                                                     <div>
@@ -378,7 +427,7 @@ export const TransfersUpsertPage = () => {
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                                         Descripcion / Concepto
                                                     </label>
-                                                    <textarea
+                                                        <textarea
                                                         value={formData.description}
                                                         onChange={(e) =>
                                                             setFormData({
@@ -387,10 +436,13 @@ export const TransfersUpsertPage = () => {
                                                             })
                                                         }
                                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-none"
-                                                        rows={3}
-                                                        placeholder="Describe el motivo de la transferencia..."
-                                                        required
-                                                    />
+                                                            rows={3}
+                                                            placeholder="Describe el motivo de la transferencia..."
+                                                            required
+                                                        />
+                                                        {fieldErrors.description && (
+                                                            <p className="mt-2 text-sm text-red-600">{fieldErrors.description}</p>
+                                                        )}
                                                 </div>
 
                                             </div>

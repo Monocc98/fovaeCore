@@ -24,6 +24,8 @@ import {
   updateSubcategoryAction,
   updateSubsubcategoryAction,
 } from "@/categories/actions/categories.actions";
+import { getErrorMessage } from "@/helpers";
+import { toast } from "sonner";
 
 import { DeleteCategoryAlert } from "../components/alerts/DeleteCategoryAlert";
 import { useLocation, useNavigate, useParams } from "react-router";
@@ -102,6 +104,15 @@ const normalizeBucket = (bucket?: string | null) => {
     return "VARIABLE_EXPENSE";
   }
 
+  if (
+    normalized === "UTILITY" ||
+    normalized === "UTILITIES" ||
+    normalized === "UTILIDAD" ||
+    normalized === "UTILIDADES"
+  ) {
+    return "UTILITY";
+  }
+
   if (normalized === "FAMILY" || normalized === "FAMILIA") {
     return "FAMILY";
   }
@@ -115,6 +126,7 @@ const getBucketLabel = (bucket?: string) => {
   if (normalizedBucket === "INCOME") return "Ingreso";
   if (normalizedBucket === "FIXED_EXPENSE") return "Egreso Fijo";
   if (normalizedBucket === "VARIABLE_EXPENSE") return "Egreso Variable";
+  if (normalizedBucket === "UTILITY") return "Utilidades";
   if (normalizedBucket === "FAMILY") return "Family";
   return null;
 };
@@ -131,6 +143,7 @@ const getBucketBadgeClass = (bucket?: string) => {
   if (normalizedBucket === "INCOME") return "bg-emerald-100 text-emerald-700 border border-emerald-200";
   if (normalizedBucket === "FIXED_EXPENSE") return "bg-rose-100 text-rose-700 border border-rose-200";
   if (normalizedBucket === "VARIABLE_EXPENSE") return "bg-orange-100 text-orange-700 border border-orange-200";
+  if (normalizedBucket === "UTILITY") return "bg-cyan-100 text-cyan-700 border border-cyan-200";
   if (normalizedBucket === "FAMILY") return "bg-slate-100 text-slate-700 border border-slate-200";
 
   return "bg-yellow-100 text-yellow-700 border border-yellow-200";
@@ -350,14 +363,14 @@ export const CategoriesPage = () => {
     }
 
     if (type === "INCOME") {
-      if (bucket !== "INCOME") {
+      if (bucket !== "INCOME" && bucket !== "UTILITY") {
         setValue("bucket", "INCOME");
       }
       return;
     }
 
     if (type === "EXPENSE") {
-      if (bucket === "INCOME") {
+      if (bucket === "INCOME" || bucket === "UTILITY") {
         setValue("bucket", "");
       }
       return;
@@ -519,6 +532,9 @@ export const CategoriesPage = () => {
       setEditingId(null);
       setShowForm(false);
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo crear la categoria."));
+    },
   });
 
   const updateMut = useMutation({
@@ -571,6 +587,9 @@ export const CategoriesPage = () => {
       setEditingId(null);
       setShowForm(false);
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo actualizar la categoria."));
+    },
   });
 
   const deleteMut = useMutation<void, unknown, DeletePayload>({
@@ -596,6 +615,9 @@ export const CategoriesPage = () => {
       setEditingId(null);
       setShowForm(false);
     },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo eliminar la categoria."));
+    },
   });
 
   const reorderMut = useMutation({
@@ -604,6 +626,9 @@ export const CategoriesPage = () => {
       queryClient.invalidateQueries({
         queryKey: ["categories", companyId],
       });
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error, "No se pudo reordenar la categoria."));
     },
   });
 
@@ -1049,11 +1074,16 @@ export const CategoriesPage = () => {
                       </label>
                       <select
                         {...register("bucket")}
-                        disabled={!type || type === "INCOME"}
+                        disabled={!type}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400"
                       >
                         <option value="">Seleccionar...</option>
-                        {type === "INCOME" && <option value="INCOME">Ingreso</option>}
+                        {type === "INCOME" && (
+                          <>
+                            <option value="INCOME">Ingreso</option>
+                            <option value="UTILITY">Utilidades</option>
+                          </>
+                        )}
                         {type === "EXPENSE" && (
                           <>
                             <option value="FIXED_EXPENSE">Egreso Fijo</option>

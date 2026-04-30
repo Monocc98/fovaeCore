@@ -16,7 +16,9 @@ import { buildHierarchyFromNested } from "../helpers/buildHierarchy.helper";
 import { calculateTotals } from "../helpers/totals.helper";
 import { useAuthStore } from "@/auth/store/auth.store";
 import { Switch } from "@/components/ui/switch";
+import { getErrorMessage } from "@/helpers";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { toggleBudgetLockAction } from "../actions/budget.actions";
 
 export const BudgetPage: React.FC = () => {
@@ -161,6 +163,7 @@ export const BudgetPage: React.FC = () => {
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev)
         queryClient.setQueryData(["fiscalYears", companyId], ctx.prev);
+      toast.error(getErrorMessage(_err, "No se pudo cambiar el bloqueo del presupuesto."));
     },
 
     onSettled: () => {

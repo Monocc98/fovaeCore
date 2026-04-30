@@ -1,6 +1,7 @@
 import { useForm } from "react-hook-form";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   createMovementAction,
   getMovementByIdAction,
@@ -9,8 +10,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getCategoriesOverloadAction } from "../../categories/actions/categories.actions";
-import { formatCurrency, formatDate, getTransactionColor } from "@/helpers";
+import { formatCurrency, formatDate, getErrorMessage, getFieldErrors, getTransactionColor } from "@/helpers";
 import type { CategoriesResponse, Category } from "../../types";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 
 type FormValues = {
   id?: string;
@@ -43,6 +46,17 @@ export const MovementsUpsertPage = () => {
 
   const backTo = (location.state as any)?.backTo as string | null;
 
+  const refreshHomeCaches = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["homeOverlay"],
+      refetchType: "active",
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["homeBucketsSummary"],
+      refetchType: "active",
+    });
+  };
+
   const movementQuery = useQuery({
     queryKey: ["movement", idMovement],
     queryFn: () => getMovementByIdAction(idMovement!),
@@ -62,6 +76,8 @@ export const MovementsUpsertPage = () => {
     handleSubmit,
     reset,
     setValue,
+    setError,
+    clearErrors,
     formState: { errors },
     watch,
   } = useForm<FormValues>({
@@ -114,6 +130,30 @@ export const MovementsUpsertPage = () => {
   const recordedAtDate = movement?.recordedAt
     ? new Date(movement.recordedAt)
     : null;
+  const [submitError, setSubmitError] = useState<unknown>(null);
+
+  const applyServerFieldErrors = (error: unknown) => {
+    const fieldErrors = getFieldErrors(error);
+    const fieldMap: Record<string, keyof FormValues> = {
+      occurredAt: "occurredAt",
+      amount: "amount",
+      description: "description",
+      comments: "comments",
+      account: "account",
+      categoryId: "categoryId",
+      subcategoryId: "subcategoryId",
+      subsubcategory: "subsubcategory",
+      subsubcategoryId: "subsubcategory",
+    };
+
+    Object.entries(fieldErrors).forEach(([key, message]) => {
+      const formKey = fieldMap[key];
+      if (!formKey) return;
+      setError(formKey, { type: "server", message });
+    });
+
+    return Object.keys(fieldErrors).length > 0;
+  };
 
   useEffect(() => {
     if (mode !== "edit") return;
@@ -156,17 +196,29 @@ export const MovementsUpsertPage = () => {
         // Si tu API espera 'subsubcategoryId', asegúrate de enviarlo:
         subsubcategory: payload.subsubcategory,
       } as any),
-    onSuccess: async () => {
-      queryClient.invalidateQueries({
-        queryKey: ["movementsOverlay", idAccount],
-      });
-      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
-      await queryClient.refetchQueries({
-        queryKey: ["homeOverlay"],
-        type: "active",
+    onSuccess: (createdMovement: any) => {
+      setSubmitError(null);
+      queryClient.setQueryData(["movementsOverlay", idAccount], (prev: any) => {
+        if (!prev?.movements) return prev;
+        return {
+          ...prev,
+          movements: [createdMovement, ...prev.movements],
+        };
       });
 
+      void queryClient.invalidateQueries({
+        queryKey: ["movementsOverlay", idAccount],
+        refetchType: "active",
+      });
+      refreshHomeCaches();
       navigate(-1);
+    },
+    onError: (error) => {
+      const hasFieldErrors = applyServerFieldErrors(error);
+      setSubmitError(error);
+      if (!hasFieldErrors) {
+        toast.error(getErrorMessage(error, "No se pudo guardar el movimiento."));
+      }
     },
   });
 
@@ -183,21 +235,70 @@ export const MovementsUpsertPage = () => {
         subcategoryId: undefined,
         subsubcategory: payload.subsubcategory,
       } as any),
-    onSuccess: async (data: any) => {
+    onSuccess: (data: any) => {
+      setSubmitError(null);
       const updated = data?.movement ?? data;
       const newAccountId = String(updated?.account ?? "");
-      if (oldAccountId)
-        await queryClient.invalidateQueries({
-          queryKey: ["movementsOverlay", oldAccountId],
+
+      if (oldAccountId === newAccountId) {
+        queryClient.setQueryData(["movementsOverlay", oldAccountId], (prev: any) => {
+          if (!prev?.movements) return prev;
+          return {
+            ...prev,
+            movements: prev.movements.map((movement: any) =>
+              String(movement.id ?? movement._id) === String(updated.id ?? updated._id)
+                ? updated
+                : movement
+            ),
+          };
         });
-      if (newAccountId && newAccountId !== oldAccountId) {
-        await queryClient.invalidateQueries({
-          queryKey: ["movementsOverlay", newAccountId],
+      } else {
+        if (oldAccountId) {
+          queryClient.setQueryData(["movementsOverlay", oldAccountId], (prev: any) => {
+            if (!prev?.movements) return prev;
+            return {
+              ...prev,
+              movements: prev.movements.filter(
+                (movement: any) =>
+                  String(movement.id ?? movement._id) !== String(updated.id ?? updated._id)
+              ),
+            };
+          });
+        }
+
+        if (newAccountId) {
+          queryClient.setQueryData(["movementsOverlay", newAccountId], (prev: any) => {
+            if (!prev?.movements) return prev;
+            return {
+              ...prev,
+              movements: [updated, ...prev.movements],
+            };
+          });
+        }
+      }
+
+      if (oldAccountId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["movementsOverlay", oldAccountId],
+          refetchType: "active",
         });
       }
-      await queryClient.invalidateQueries({ queryKey: ["homeOverlay"] });
+      if (newAccountId && newAccountId !== oldAccountId) {
+        void queryClient.invalidateQueries({
+          queryKey: ["movementsOverlay", newAccountId],
+          refetchType: "active",
+        });
+      }
       queryClient.setQueryData(["movement", idMovement], data);
+      refreshHomeCaches();
       navigate(-1);
+    },
+    onError: (error) => {
+      const hasFieldErrors = applyServerFieldErrors(error);
+      setSubmitError(error);
+      if (!hasFieldErrors) {
+        toast.error(getErrorMessage(error, "No se pudo actualizar el movimiento."));
+      }
     },
   });
 
@@ -233,6 +334,9 @@ export const MovementsUpsertPage = () => {
   };
 
   const onSubmit = (form: FormValues) => {
+    if (createMut.isPending || updateMut.isPending) return;
+    setSubmitError(null);
+    clearErrors();
     if (!form.subsubcategory) {
       // valida que eligió la hoja
       return;
@@ -266,6 +370,7 @@ export const MovementsUpsertPage = () => {
 
   const [amountInput, setAmountInput] = useState("");
   const [isAmountFocused, setIsAmountFocused] = useState(false);
+  const isSubmitting = createMut.isPending || updateMut.isPending;
 
   const previewAmount = isExpense
     ? -Math.abs(Number(watchedAmount) || 0)
@@ -302,6 +407,30 @@ export const MovementsUpsertPage = () => {
     setAmountInput(numeric ? formatCurrency(numeric) : "");
   }, [watchedAmount, isAmountFocused]);
 
+  if (movementQuery.isError) {
+    return (
+      <div className="max-w-4xl mx-auto py-4">
+        <QueryErrorState
+          error={movementQuery.error}
+          onRetry={() => void movementQuery.refetch()}
+          title="No se pudo cargar el movimiento"
+        />
+      </div>
+    );
+  }
+
+  if (categoriesQuery.isError) {
+    return (
+      <div className="max-w-4xl mx-auto py-4">
+        <QueryErrorState
+          error={categoriesQuery.error}
+          onRetry={() => void categoriesQuery.refetch()}
+          title="No se pudieron cargar las categorias"
+        />
+      </div>
+    );
+  }
+
   return (
     /* Movement Form */
     <div className="max-w-4xl mx-auto py-4">
@@ -325,19 +454,22 @@ export const MovementsUpsertPage = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="cursor-pointer px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+              disabled={isSubmitting}
+              className="cursor-pointer px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              //   onClick={handleSaveMovement}
-              className=" cursor-pointer px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium"
+              disabled={isSubmitting}
+              className=" cursor-pointer px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              {isEditing ? "Actualizar" : "Guardar"}
+              {isSubmitting ? "Guardando..." : isEditing ? "Actualizar" : "Guardar"}
             </button>
           </div>
         </div>
+
+        <FormErrorBanner error={submitError} className="mb-6" />
 
         {/* Form Content */}
         <div className="grid grid-cols-12 gap-8">

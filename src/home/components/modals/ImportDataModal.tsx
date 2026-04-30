@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { FileUploadStep } from "../importDataComponents/FileUploadStep";
 import { ConceptMappingStep } from "../importDataComponents/ConceptMappingStep";
 import {
@@ -262,18 +263,21 @@ export const ImportDataModal = ({
             </div>
           ) : resumeBatchId && resumeQuery.isError ? (
             <div className="flex min-h-0 flex-1 items-center justify-center px-6">
-              <div className="max-w-md rounded-xl border border-red-200 bg-red-50 p-5 text-center">
-                <AlertCircle className="mx-auto mb-3 h-6 w-6 text-red-500" />
-                <p className="text-sm text-red-700">
-                  No se pudo cargar el proceso pendiente. Intenta de nuevo.
-                </p>
-                <button
-                  type="button"
-                  onClick={handleClose}
-                  className="mt-4 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100"
-                >
-                  Cerrar
-                </button>
+              <div className="max-w-md">
+                <QueryErrorState
+                  error={resumeQuery.error}
+                  onRetry={() => void resumeQuery.refetch()}
+                  title="No se pudo cargar el proceso pendiente"
+                />
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-900 transition-colors hover:bg-gray-100"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
           ) : step === "upload" ? (

@@ -41,16 +41,34 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   const type = watch("type");
   const level = watch("level");
 
-  // Auto-set bucket to INCOME when type is INCOME
   useEffect(() => {
     if (type === "INCOME") {
-      setValue("bucket", "INCOME");
+      const currentBucket = watch("bucket");
+      if (currentBucket !== "INCOME" && currentBucket !== "UTILITY") {
+        setValue("bucket", "INCOME");
+      }
+      return;
     }
-  }, [type, setValue]);
+
+    if (type === "EXPENSE") {
+      const currentBucket = watch("bucket");
+      if (
+        currentBucket &&
+        currentBucket !== "FIXED_EXPENSE" &&
+        currentBucket !== "VARIABLE_EXPENSE" &&
+        currentBucket !== "FAMILY"
+      ) {
+        setValue("bucket", "FIXED_EXPENSE");
+      }
+    }
+  }, [type, setValue, watch]);
 
   const getBucketOptions = () => {
     if (type === "INCOME") {
-      return [{ value: "INCOME", label: "Ingreso" }];
+      return [
+        { value: "INCOME", label: "Ingreso" },
+        { value: "UTILITY", label: "Utilidades" },
+      ];
     }
     if (type === "EXPENSE") {
       return [
@@ -144,7 +162,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               </label>
               <select
                 {...register("bucket")}
-                disabled={type === "INCOME"}
+                disabled={!type}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 <option value="">Seleccionar...</option>

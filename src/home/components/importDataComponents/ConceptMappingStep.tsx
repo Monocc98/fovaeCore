@@ -5,6 +5,7 @@ import { useCategories } from "@/budget/hooks/useCategories";
 import { confirmImportAction } from "@/home/actions/movements.actions";
 import { useQuery } from "@tanstack/react-query";
 import { getAccountsAction } from "@/accounts/actions/acounts.actions";
+import { FormErrorBanner } from "@/components/ui/FormErrorBanner";
 
 interface Concept {
   externalConceptKey: string;
@@ -50,7 +51,7 @@ export const ConceptMappingStep = ({
 }: ConceptMappingStepProps) => {
   const [mappings, setMappings] = useState<Record<string, MappingState>>({});
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sectionAccountMap, setSectionAccountMap] =
     useState<Record<string, string>>(initialSectionAccountMap);
@@ -210,16 +211,9 @@ export const ConceptMappingStep = ({
         insertedCount: data.insertedCount,
         transferCreatedCount: data.transferCreatedCount ?? 0,
       });
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error confirming import:", err);
-
-      const msg =
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        "Error al confirmar la importacion";
-
-      setError(msg);
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -529,12 +523,15 @@ export const ConceptMappingStep = ({
             )}
           </div>
 
-          {error && (
-            <div className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-              <p className="text-sm text-red-700">{error}</p>
-            </div>
-          )}
+          {Boolean(error) &&
+            (typeof error === "string" ? (
+              <div className="mt-4 flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+                <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            ) : (
+              <FormErrorBanner error={error} className="mt-4" />
+            ))}
         </div>
       </div>
 
