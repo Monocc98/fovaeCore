@@ -44,7 +44,19 @@ export const MovementsUpsertPage = () => {
   const location = useLocation();
   const queryClient = useQueryClient();
 
-  const backTo = (location.state as any)?.backTo as string | null;
+  const backTo = (
+    (location.state as any)?.backTo ??
+    (location.state as any)?.state?.backTo ??
+    null
+  ) as string | null;
+
+  const navigateBack = () => {
+    if (backTo) {
+      navigate(backTo, { replace: true });
+    } else {
+      navigate(-1);
+    }
+  };
 
   const refreshHomeCaches = () => {
     void queryClient.invalidateQueries({
@@ -211,7 +223,7 @@ export const MovementsUpsertPage = () => {
         refetchType: "active",
       });
       refreshHomeCaches();
-      navigate(-1);
+      navigateBack();
     },
     onError: (error) => {
       const hasFieldErrors = applyServerFieldErrors(error);
@@ -291,7 +303,7 @@ export const MovementsUpsertPage = () => {
       }
       queryClient.setQueryData(["movement", idMovement], data);
       refreshHomeCaches();
-      navigate(-1);
+      navigateBack();
     },
     onError: (error) => {
       const hasFieldErrors = applyServerFieldErrors(error);
@@ -321,11 +333,7 @@ export const MovementsUpsertPage = () => {
   });
 
   const handleCancel = () => {
-    if (backTo) {
-      navigate(backTo, { replace: true });
-    } else {
-      navigate(-1);
-    }
+    navigateBack();
     // const homeSnap = (location.state as any)?.homeSnapshot ?? null;
     // navigate("/", {
     //   replace: true,

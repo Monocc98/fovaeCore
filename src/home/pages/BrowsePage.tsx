@@ -24,7 +24,7 @@ import {
   Settings,
   TableProperties,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router";
 import { useOverlay } from "../hooks/useOverlay";
 import { ImportDataModal } from "../components/modals/ImportDataModal";
@@ -57,6 +57,80 @@ const getFamilyTotals = (item: FamilyTotals): FamilyTotals => ({
   family: item.family,
 });
 
+const DEFAULT_MOVEMENTS_FILTERS: MovementsFilters = {
+  q: "",
+  type: "ALL",
+  status: "ALL",
+  categoryMode: "include",
+  categoryId: undefined,
+  subcategoryId: undefined,
+  subsubcategoryId: undefined,
+  dateFrom: undefined,
+  dateTo: undefined,
+  minAmount: undefined,
+  showTransfers: true,
+};
+
+const getParam = (params: URLSearchParams, key: string) =>
+  params.get(key)?.trim() || undefined;
+
+const readMovementsFilters = (params: URLSearchParams): MovementsFilters => {
+  const type = getParam(params, "mf_type");
+  const status = getParam(params, "mf_status");
+  const categoryMode = getParam(params, "mf_cat_mode");
+  const minAmount = getParam(params, "mf_min");
+  const showTransfers = getParam(params, "mf_transfers");
+
+  return {
+    ...DEFAULT_MOVEMENTS_FILTERS,
+    q: params.get("mf_q") ?? "",
+    type: type === "INCOME" || type === "OUTCOME" ? type : "ALL",
+    status: status === "completed" || status === "pending" ? status : "ALL",
+    categoryMode: categoryMode === "exclude" ? "exclude" : "include",
+    categoryId: getParam(params, "mf_cat"),
+    subcategoryId: getParam(params, "mf_subcat"),
+    subsubcategoryId: getParam(params, "mf_leaf"),
+    dateFrom: getParam(params, "mf_from"),
+    dateTo: getParam(params, "mf_to"),
+    minAmount:
+      minAmount !== undefined && Number.isFinite(Number(minAmount))
+        ? Number(minAmount)
+        : undefined,
+    showTransfers: showTransfers === "0" ? false : true,
+  };
+};
+
+const writeMovementsFilters = (
+  params: URLSearchParams,
+  filters: MovementsFilters
+) => {
+  const setOrDelete = (key: string, value?: string | number | boolean) => {
+    if (value === undefined || value === "" || value === null) {
+      params.delete(key);
+    } else {
+      params.set(key, String(value));
+    }
+  };
+
+  setOrDelete("mf_q", filters.q);
+  setOrDelete("mf_type", filters.type === "ALL" ? undefined : filters.type);
+  setOrDelete(
+    "mf_status",
+    filters.status === "ALL" ? undefined : filters.status
+  );
+  setOrDelete(
+    "mf_cat_mode",
+    filters.categoryMode === "exclude" ? "exclude" : undefined
+  );
+  setOrDelete("mf_cat", filters.categoryId);
+  setOrDelete("mf_subcat", filters.subcategoryId);
+  setOrDelete("mf_leaf", filters.subsubcategoryId);
+  setOrDelete("mf_from", filters.dateFrom);
+  setOrDelete("mf_to", filters.dateTo);
+  setOrDelete("mf_min", filters.minAmount);
+  setOrDelete("mf_transfers", filters.showTransfers === false ? "0" : undefined);
+};
+
 export const BrowsePage = () => {
   const navigate = useNavigate();
   const overlay = useOverlay();
@@ -79,19 +153,18 @@ export const BrowsePage = () => {
       ? "companies"
       : "groups";
 
-  const [filters, setFilters] = useState<MovementsFilters>({
-    q: "",
-    type: "ALL",
-    status: "ALL",
-    categoryMode: "include",
-    categoryId: undefined,
-    subcategoryId: undefined,
-    subsubcategoryId: undefined,
-    dateFrom: undefined,
-    dateTo: undefined,
-    minAmount: undefined,
-    showTransfers: true,
-  });
+  const filters = useMemo(
+    () => readMovementsFilters(searchParams),
+    [searchParams]
+  );
+  const setFilters = useCallback(
+    (next: MovementsFilters) => {
+      const sp = new URLSearchParams(searchParams);
+      writeMovementsFilters(sp, next);
+      setSearchParams(sp, { replace: true });
+    },
+    [searchParams, setSearchParams]
+  );
   const [includeFamily, setIncludeFamily] = useState(true);
 
   const { data: budgetOverlay } = useQuery({

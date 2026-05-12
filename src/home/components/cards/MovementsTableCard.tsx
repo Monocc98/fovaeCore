@@ -472,21 +472,21 @@ export const MovementsTableCard = ({
   const handleNewMovimiento = () => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/movement/new/${idAccount}`, {
-      state: { state: { backTo } },
+      state: { backTo },
     });
   };
 
   const handleNewTransfer = () => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/transfer/new/${idAccount}`, {
-      state: { state: { backTo } },
+      state: { backTo },
     });
   };
 
   const handleEditMovement = (idMovement: string) => {
     const backTo = location.pathname + location.search;
     navigate(`/company/${companyId}/movement/${idMovement}/edit`, {
-      state: { state: { backTo } },
+      state: { backTo },
     });
   };
 

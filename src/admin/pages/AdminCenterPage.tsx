@@ -2,7 +2,7 @@ import { Shield, Users, KeyRound, CalendarRange, AlertTriangle } from "lucide-re
 import { useAuthStore } from "@/auth/store/auth.store";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOutletContext } from "react-router";
-import { AdminUsersPanel } from "@/admin/components";
+import { AdminCompanyFiscalPanel, AdminUsersPanel } from "@/admin/components";
 import type { OutletContext as HomeOutletContext } from "@/home/layouts/HomeLayoutV2";
 
 const modules = [
@@ -76,6 +76,9 @@ export const AdminCenterPage = () => {
               <TabsTrigger value="users" className="rounded-xl px-4 py-2">
                 Usuarios
               </TabsTrigger>
+              <TabsTrigger value="fiscal" className="rounded-xl px-4 py-2">
+                Configuracion Fiscal
+              </TabsTrigger>
               <TabsTrigger value="overview" className="rounded-xl px-4 py-2">
                 Resumen
               </TabsTrigger>
@@ -83,6 +86,10 @@ export const AdminCenterPage = () => {
 
             <TabsContent value="users" className="mt-6">
               <AdminUsersPanel overlay={overlay} />
+            </TabsContent>
+
+            <TabsContent value="fiscal" className="mt-6">
+              <AdminCompanyFiscalPanel overlay={overlay} />
             </TabsContent>
 
             <TabsContent value="overview" className="mt-6">
