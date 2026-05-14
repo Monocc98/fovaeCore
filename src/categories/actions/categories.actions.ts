@@ -9,6 +9,25 @@ export interface ReorderCategoriesPayload {
     orderedIds: string[];
 }
 
+export type MembershipOption = {
+    id?: string;
+    _id?: string;
+    dividendShare?: number;
+    company: string | { _id?: string; id?: string; name?: string };
+    user: {
+        _id?: string;
+        id?: string;
+        name: string;
+        email: string;
+    };
+};
+
+export const getMembershipsAction = async(): Promise<{ memberships: MembershipOption[] }> => {
+    const { data } = await fovaeCoreApi.get<{ memberships: MembershipOption[] }>("/membership");
+
+    return data;
+}
+
 export const getCategoriesOverloadAction = async(idCompany: string):Promise<CategoriesResponse> => {
     const { data } = await fovaeCoreApi.get<CategoriesResponse>(`/categories/${idCompany}`);
 

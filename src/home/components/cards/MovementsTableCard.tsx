@@ -359,6 +359,7 @@ export const MovementsTableCard = ({
 
     return (
       normalizedBucket === "family" ||
+      normalizedBucket === "utility" ||
       String(meta.categoryId) === INCOME_FAMILY_CATEGORY_ID ||
       (normalizedType === "income" && String(meta.categoryId) === INCOME_FAMILY_CATEGORY_ID)
     );

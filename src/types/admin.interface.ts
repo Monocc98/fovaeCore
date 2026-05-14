@@ -61,6 +61,7 @@ export interface AdminCompanyPermission {
   membershipId: string;
   status: AdminMembershipStatus;
   baseRole: BaseRole;
+  dividendShare: number;
   accounts: AdminAccountPermission[];
 }
 
@@ -68,6 +69,7 @@ export interface AdminPermissionsPayloadCompany {
   companyId: string;
   status: AdminWritableMembershipStatus;
   baseRole: BaseRole;
+  dividendShare: number;
   accounts: AdminAccountPermission[];
 }
 

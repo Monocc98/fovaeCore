@@ -120,7 +120,7 @@ export const CategorySummaryTable = ({
             value: summary.family,
             percentage: pct(summary.family, displayIncome),
         },
-    ].filter((row) => includeFamily || row.key !== "FAMILY");
+    ].filter((row) => includeFamily || (row.key !== "FAMILY" && row.key !== "UTILITY"));
 
     const totalDot = "bg-slate-500";
     const totalText = "text-slate-900";
@@ -200,7 +200,7 @@ export const CategorySummaryTable = ({
                                         </div>
                                     </div>
 
-                                    <div className={`grid grid-cols-2 ${includeFamily ? "md:grid-cols-5" : "md:grid-cols-4"} gap-3 text-sm`}>
+                                    <div className={`grid grid-cols-2 ${includeFamily ? "md:grid-cols-5" : "md:grid-cols-3"} gap-3 text-sm`}>
                                         <div>
                                             <div className="text-gray-500">Ingresos</div>
                                             <div className="font-semibold text-green-600">{formatCurrency(getDisplayIncome(c.summary, includeFamily))}</div>
@@ -213,10 +213,12 @@ export const CategorySummaryTable = ({
                                             <div className="text-gray-500">Egresos Variables</div>
                                             <div className="font-semibold text-orange-600">{formatCurrency(c.summary.egresosVariables)}</div>
                                         </div>
-                                        <div>
-                                            <div className="text-gray-500">Utilidades</div>
-                                            <div className="font-semibold text-cyan-700">{formatCurrency(c.summary.utilidades ?? 0)}</div>
-                                        </div>
+                                        {includeFamily && (
+                                            <div>
+                                                <div className="text-gray-500">Utilidades</div>
+                                                <div className="font-semibold text-cyan-700">{formatCurrency(c.summary.utilidades ?? 0)}</div>
+                                            </div>
+                                        )}
                                         {includeFamily && (
                                             <div>
                                                 <div className="text-gray-500">Family</div>

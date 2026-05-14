@@ -1,4 +1,5 @@
 export * from './BrowsePage'
+export * from './DividendsPage'
 export * from './ExpenseBudgetObjectivePage'
 export * from './MovementsUpsertPage'
 export * from './TransfersUpsertPage'

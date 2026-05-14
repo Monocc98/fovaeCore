@@ -58,6 +58,7 @@ const toDraft = (
     companyId: company.companyId,
     status: company.status === "active" ? "active" : "disabled",
     baseRole: company.baseRole,
+    dividendShare: company.dividendShare ?? 0,
     accounts: company.accounts.map((account) => ({
       accountId: account.accountId,
       canView: account.canView,
@@ -203,6 +204,7 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
             companyId,
             status: "active",
             baseRole: "VIEWER",
+            dividendShare: 0,
             accounts: buildAccounts(companyId),
           },
         ],
@@ -282,6 +284,7 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
               companyId: company.companyId,
               status: company.status,
               baseRole: company.baseRole,
+              dividendShare: company.dividendShare,
               accounts: company.accounts.map((account) => ({ ...account })),
             })),
         },
@@ -587,7 +590,7 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
                       </Button>
                     </div>
 
-                    <div className="grid gap-3 md:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-4">
                       <Select
                         value={company.companyId}
                         onValueChange={(companyId) =>
@@ -645,6 +648,24 @@ export const AdminUsersPanel = ({ overlay }: Props) => {
                           <SelectItem value="VIEWER">VIEWER</SelectItem>
                         </SelectContent>
                       </Select>
+
+                      <div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.01}
+                          value={company.dividendShare}
+                          onChange={(event) =>
+                            patchPermissionRow(index, (row) => ({
+                              ...row,
+                              dividendShare: Number(event.target.value),
+                            }))
+                          }
+                          aria-label="Porcentaje de dividendos"
+                        />
+                        <div className="mt-1 text-xs text-slate-500">% dividendos</div>
+                      </div>
                     </div>
 
                     <div className="mt-4 space-y-2">

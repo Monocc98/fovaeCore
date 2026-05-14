@@ -3,6 +3,7 @@ import { AuthLayout } from "@/auth/layouts/AuthLayout";
 import { RequiredSuperAdmin } from "@/auth/guards/RequiredSuperAdmin";
 import {
   BrowsePage,
+  DividendsPage,
   ExpenseBudgetObjectivePage,
   MovementsUpsertPage,
   TransfersUpsertPage,
@@ -56,6 +57,10 @@ export const appRouter = createBrowserRouter([
               {
                 path: "budget/:companyId",
                 element: <BudgetPage />,
+              },
+              {
+                path: "dividends",
+                element: <DividendsPage />,
               },
               {
                 path: "categories/:companyId",

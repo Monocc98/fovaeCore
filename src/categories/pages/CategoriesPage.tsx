@@ -19,6 +19,7 @@ import {
   deleteSubcategoryAction,
   deleteSubsubcategoryAction,
   getCategoriesOverloadAction,
+  getMembershipsAction,
   reorderCategoriesAction,
   updateCategoryAction,
   updateSubcategoryAction,
@@ -45,6 +46,7 @@ interface CategoryFormValues {
   id?: string;
   type?: string;
   bucket?: string;
+  assignedUser?: string;
 }
 
 export type Row = {
@@ -53,6 +55,12 @@ export type Row = {
   name: string;
   type?: string;
   bucket?: string;
+  assignedUser?: string;
+  assignedUserDoc?: {
+    _id: string;
+    name: string;
+    email: string;
+  };
   path: string;
   scope: "COMPANY" | "ACCOUNT" | string;
   sortIndex?: number;
@@ -277,6 +285,7 @@ export const CategoriesPage = () => {
       categoryId: "",
       type: "",
       bucket: "",
+      assignedUser: "",
     },
   });
 
@@ -285,6 +294,38 @@ export const CategoriesPage = () => {
   const bucket = watch("bucket");
   const categoryId = watch("categoryId");
   const parentId = watch("parentId");
+  const assignedUser = watch("assignedUser");
+
+  const membershipsQuery = useQuery({
+    queryKey: ["memberships"],
+    queryFn: getMembershipsAction,
+  });
+
+  const partnerOptions = useMemo(() => {
+    const byUser = new Map<string, { id: string; name: string; email: string }>();
+
+    for (const membership of membershipsQuery.data?.memberships ?? []) {
+      const membershipCompanyId =
+        typeof membership.company === "string"
+          ? membership.company
+          : (membership.company.id ?? membership.company._id ?? "");
+
+      if (membershipCompanyId !== companyId || Number(membership.dividendShare ?? 0) <= 0) {
+        continue;
+      }
+
+      const id = membership.user.id ?? membership.user._id ?? "";
+      if (!id) continue;
+
+      byUser.set(id, {
+        id,
+        name: membership.user.name,
+        email: membership.user.email,
+      });
+    }
+
+    return Array.from(byUser.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [companyId, membershipsQuery.data?.memberships]);
 
   const treeRows = useMemo<TreeNode[]>(() => {
     return sortBySortIndex(parentCategories).map((cat) => ({
@@ -309,6 +350,8 @@ export const CategoriesPage = () => {
           sortIndex: sub.sortIndex,
           catId: cat._id,
           bucket: normalizeBucket(sub.bucket),
+          assignedUser: sub.assignedUser,
+          assignedUserDoc: sub.assignedUserDoc,
           subId: sub._id,
         },
         children: sortBySortIndex(sub.subsubcategories ?? []).map((leaf) => ({
@@ -378,6 +421,12 @@ export const CategoriesPage = () => {
 
     setValue("bucket", "");
   }, [bucket, level, type, setValue]);
+
+  useEffect(() => {
+    if (level !== "subcategory" && assignedUser) {
+      setValue("assignedUser", "");
+    }
+  }, [assignedUser, level, setValue]);
 
   useEffect(() => {
     if (level !== "subsubcategory" && categoryId) {
@@ -505,6 +554,7 @@ export const CategoriesPage = () => {
           name: payload.name,
           scope: payload.scope,
           parent: payload.parentId,
+          assignedUser: payload.assignedUser || undefined,
           company: companyId!,
         } as any);
       }
@@ -528,6 +578,7 @@ export const CategoriesPage = () => {
         categoryId: "",
         type: "",
         bucket: "",
+        assignedUser: "",
       });
       setEditingId(null);
       setShowForm(false);
@@ -560,6 +611,7 @@ export const CategoriesPage = () => {
           name: data.name,
           scope: data.scope,
           parent: data.parentId,
+          assignedUser: data.assignedUser || undefined,
           company: companyId!,
         } as any);
       }
@@ -583,6 +635,7 @@ export const CategoriesPage = () => {
         categoryId: "",
         type: "",
         bucket: "",
+        assignedUser: "",
       });
       setEditingId(null);
       setShowForm(false);
@@ -642,6 +695,7 @@ export const CategoriesPage = () => {
       categoryId: "",
       type: "",
       bucket: "",
+      assignedUser: "",
     });
     setShowForm(true);
   };
@@ -656,6 +710,7 @@ export const CategoriesPage = () => {
         categoryId: "",
         type: row.type,
         bucket: normalizeBucket(row.bucket) ?? "",
+        assignedUser: "",
       });
     } else if (row.level === "subcategory") {
       reset({
@@ -664,6 +719,7 @@ export const CategoriesPage = () => {
         scope: (row.scope as Scope) ?? "COMPANY",
         parentId: row.catId,
         categoryId: "",
+        assignedUser: row.assignedUser ?? "",
       });
     } else {
       reset({
@@ -672,6 +728,7 @@ export const CategoriesPage = () => {
         scope: (row.scope as Scope) ?? "COMPANY",
         categoryId: row.catId,
         parentId: row.subId,
+        assignedUser: "",
       });
     }
 
@@ -905,6 +962,11 @@ export const CategoriesPage = () => {
                       {bucketLabel}
                     </span>
                   )}
+                  {row.assignedUserDoc && (
+                    <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs font-medium text-cyan-700">
+                      {row.assignedUserDoc.name}
+                    </span>
+                  )}
                   {!normalizedRowBucket && row.level === "category" && (
                     <span className={`rounded-full px-2 py-1 text-xs font-medium ${getBucketBadgeClass()}`}>
                       Sin clasificar
@@ -1051,6 +1113,24 @@ export const CategoriesPage = () => {
                         ))}
                       </select>
                     </div>
+                    {level === "subcategory" && (
+                      <div className="col-span-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Socio Family
+                        </label>
+                        <select
+                          {...register("assignedUser")}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
+                        >
+                          <option value="">Sin socio asignado</option>
+                          {partnerOptions.map((partner) => (
+                            <option key={partner.id} value={partner.id}>
+                              {partner.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <>

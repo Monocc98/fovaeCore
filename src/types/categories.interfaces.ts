@@ -15,6 +15,12 @@ export interface Subcategory {
     scope:             string;
     parent:            string;
     company:           string;
+    assignedUser?:     string;
+    assignedUserDoc?: {
+        _id: string;
+        name: string;
+        email: string;
+    };
     bucket?:           string;
     sortIndex?:        number;
     subsubcategories?: Subsubcategory[];
