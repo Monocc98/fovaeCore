@@ -6,6 +6,7 @@ import {
   FilterCard,
   FinancialAnalysis,
   FinancialSummary,
+  BudgetSummary,
   InfoCard,
   MovementsTableCard,
 } from "@/home/components/cards";
@@ -492,16 +493,10 @@ export const BrowsePage = () => {
                   {level != "accounts" ? (
                     <>
                       <InfoCard
-                        title="Resumen Financiero"
+                        title="Presupuesto vs Devengado"
                         icon={<Calculator className="w-5 h-5 text-gray-400" />}
                       >
-                        <FinancialSummary
-                          balance={g.balance ?? 0}
-                          income={g.ingresos ?? 0}
-                          expenses={g.egresos ?? 0}
-                          familyTotals={g}
-                          includeFamily={includeFamily}
-                        />
+                        <BudgetSummary rows={budgetNode?.budgetVsActual ?? []} />
                       </InfoCard>
                     </>
                   ) : (

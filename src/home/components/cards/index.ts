@@ -3,6 +3,7 @@ export * from './ActionMenu'
 export * from './FilterCard'
 export * from './FinancialAnalysis'
 export * from './FinancialSummary'
+export * from './BudgetSummary'
 export * from './InfoCard'
 export * from './MovementsTableCard'
 

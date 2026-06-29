@@ -20,6 +20,14 @@ export default defineConfig({
             cert: fs.readFileSync(httpsCertPath),
           }
         : undefined,
+      proxy: {
+        '/api': {
+          // El servidor en 216.250.124.244:81 responde en HTTP, no HTTPS.
+          // Usar HTTPS aquí provoca el error "wrong version number".
+          target: 'http://216.250.124.244:81',
+          changeOrigin: true,
+        },
+      },
     },
     resolve: {
       alias: {
