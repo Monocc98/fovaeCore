@@ -20,6 +20,9 @@ type Row = {
   year: number;
   budget: number;
   actual: number;
+  budgetWithoutFamily?: number;
+  actualWithoutFamily?: number;
+  familySpent?: number;
 };
 
 type Semaforo = "green" | "yellow" | "red" | "neutral";
@@ -167,12 +170,12 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps<any, any>) => {
   );
 };
 
-export const FinancialAnalysis = ({ rows }: { rows: Row[] }) => {
+export const FinancialAnalysis = ({ rows, includeFamily = true }: { rows: Row[]; includeFamily?: boolean }) => {
   const data: ChartRow[] = (rows ?? [])
     .filter((r) => r?.calMonth && r?.year)
     .map((r) => {
-      const budget = Number(r.budget ?? 0);
-      const actual = Number(r.actual ?? 0);
+      const budget = Number(includeFamily ? (r.budget ?? 0) : (r.budgetWithoutFamily ?? r.budget ?? 0));
+      const actual = Number(includeFamily ? (r.actual ?? 0) : (r.actualWithoutFamily ?? r.actual ?? 0));
       const { semaforo, ratio } = computeSemaforo(budget, actual);
 
       return {

@@ -7,8 +7,20 @@ interface Row {
   actual: number;
 }
 
+interface Row {
+  fiscalPos?: number;
+  calMonth?: number;
+  year?: number;
+  budget: number;
+  actual: number;
+  budgetWithoutFamily?: number;
+  actualWithoutFamily?: number;
+  familySpent?: number;
+}
+
 interface Props {
   rows: Row[];
+  includeFamily?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -82,7 +94,7 @@ function computeSemaforo(budget: number, actual: number): { semaforo: Semaforo; 
   return { semaforo: "green", ratio };
 }
 
-export const BudgetSummary = ({ rows }: Props) => {
+export const BudgetSummary = ({ rows, includeFamily = true }: Props) => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1; // 1-indexed (1..12)
@@ -93,8 +105,14 @@ export const BudgetSummary = ({ rows }: Props) => {
     return r.year < currentYear || (r.year === currentYear && r.calMonth <= currentMonth);
   });
 
-  const totalBudget = currentRows.reduce((sum, r) => sum + (r.budget ?? 0), 0);
-  const totalActual = currentRows.reduce((sum, r) => sum + (r.actual ?? 0), 0);
+  const totalBudget = currentRows.reduce(
+    (sum, r) => sum + (includeFamily ? (r.budget ?? 0) : (r.budgetWithoutFamily ?? r.budget ?? 0)),
+    0
+  );
+  const totalActual = currentRows.reduce(
+    (sum, r) => sum + (includeFamily ? (r.actual ?? 0) : (r.actualWithoutFamily ?? r.actual ?? 0)),
+    0
+  );
   const difference = totalActual - totalBudget;
 
   const { semaforo, ratio } = computeSemaforo(totalBudget, totalActual);

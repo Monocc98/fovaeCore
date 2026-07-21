@@ -451,7 +451,7 @@ export const BrowsePage = () => {
                         icon={<BarChart3 className="w-5 h-5 text-gray-400" />}
                         description="Comparación mensual y distribución general"
                       >
-                        <FinancialAnalysis rows={budgetNode?.budgetVsActual ?? []} />
+                        <FinancialAnalysis rows={budgetNode?.budgetVsActual ?? []} includeFamily={includeFamily} />
                       </InfoCard>
                       <InfoCard
                         title={g.id === activeId && currentSummaryNode ? currentSummaryNode.title : "Resumen por Categorias"}
@@ -496,7 +496,7 @@ export const BrowsePage = () => {
                         title="Presupuesto vs Devengado"
                         icon={<Calculator className="w-5 h-5 text-gray-400" />}
                       >
-                        <BudgetSummary rows={budgetNode?.budgetVsActual ?? []} />
+                        <BudgetSummary rows={budgetNode?.budgetVsActual ?? []} includeFamily={includeFamily} />
                       </InfoCard>
                     </>
                   ) : (

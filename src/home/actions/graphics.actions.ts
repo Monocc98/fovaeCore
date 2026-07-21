@@ -6,3 +6,10 @@ export const getExpenseBudgetTreeAction = async (idCompany: string) => {
   );
   return data;
 };
+
+export const getIncomeBudgetTreeAction = async (idCompany: string) => {
+  const { data } = await fovaeCoreApi.get(
+    `/graphics/income-budget-tree/${idCompany}`
+  );
+  return data;
+};

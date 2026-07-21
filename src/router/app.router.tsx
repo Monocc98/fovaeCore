@@ -5,6 +5,7 @@ import {
   BrowsePage,
   DividendsPage,
   ExpenseBudgetObjectivePage,
+  IncomeBudgetObjectivePage,
   MovementsUpsertPage,
   TransfersUpsertPage,
 } from "@/home/pages";
@@ -69,6 +70,15 @@ export const appRouter = createBrowserRouter([
               {
                 path: "objective-graph/:companyId",
                 element: <ExpenseBudgetObjectivePage />,
+              },
+              {
+                element: <RequiredSuperAdmin />,
+                children: [
+                  {
+                    path: "objective-graph-income/:companyId",
+                    element: <IncomeBudgetObjectivePage />,
+                  },
+                ],
               },
             ],
           },

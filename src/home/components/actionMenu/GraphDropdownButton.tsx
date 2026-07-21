@@ -6,17 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate, useParams, useSearchParams } from "react-router";
-
-const options = [
-  {
-    id: "expense-budget",
-    title: "Presupuesto vs Egresos",
-    description: "Seguimiento mensual por categoria",
-    icon: Target,
-    iconClass: "text-cyan-700",
-    hoverClass: "focus:bg-cyan-50",
-  },
-] as const;
+import { useAuthStore } from "@/auth/store/auth.store";
 
 export const GraphDropdownButton = () => {
   const navigate = useNavigate();
@@ -24,10 +14,39 @@ export const GraphDropdownButton = () => {
   const [searchParams] = useSearchParams();
   const companyId = searchParams.get("c");
 
-  const handleSelect = () => {
+  const { permissions } = useAuthStore();
+  const isSuperAdmin = permissions?.globalRole === "SUPER_ADMIN";
+
+  const options = [
+    {
+      id: "expense-budget" as const,
+      title: "Presupuesto vs Egresos",
+      description: "Seguimiento mensual por categoria",
+      icon: Target,
+      iconClass: "text-cyan-700",
+      hoverClass: "focus:bg-cyan-50",
+    },
+    ...(isSuperAdmin
+      ? [
+          {
+            id: "income-budget" as const,
+            title: "Presupuesto vs Ingresos",
+            description: "Seguimiento de ingresos y metas",
+            icon: Target,
+            iconClass: "text-emerald-700",
+            hoverClass: "focus:bg-emerald-50",
+          },
+        ]
+      : []),
+  ];
+
+  const handleSelect = (id: "expense-budget" | "income-budget") => {
     if (!groupId || !companyId) return;
     const backTo = window.location.pathname + window.location.search;
-    navigate(`/group/${groupId}/objective-graph/${companyId}`, {
+    const path = id === "expense-budget"
+      ? `/group/${groupId}/objective-graph/${companyId}`
+      : `/group/${groupId}/objective-graph-income/${companyId}`;
+    navigate(path, {
       state: { backTo },
     });
   };
@@ -55,7 +74,7 @@ export const GraphDropdownButton = () => {
           return (
             <DropdownMenuItem
               key={opt.id}
-              onClick={handleSelect}
+              onClick={() => handleSelect(opt.id)}
               className={[
                 "w-full text-left px-4 py-3 transition-colors flex items-center space-x-3 rounded-none",
                 opt.hoverClass,
