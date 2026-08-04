@@ -3,11 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 import type { FiscalYear, FiscalYearResponse } from "@/types";
 import {
-  getFiscalYearsByIdCompanyAction,
   getFiscalYearsAllAction,
 } from "@/home/actions/fiscalYear.actions";
 
-export const useFiscalYears = (companyId?: string, groupId?: string, companyIds?: string[]) => {
+export const useFiscalYears = (companyId?: string, companyIds?: string[]) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Si companyId es "general", lo tratamos como undefined para cargar todo el grupo

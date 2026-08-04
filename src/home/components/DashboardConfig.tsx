@@ -39,7 +39,7 @@ export const DashboardConfig = ({
     selectedFY,
     setSelectedFY,
     isLoading, // o loadingFY, según lo tengas nombrado en el hook
-  } = useFiscalYears(companyId || companyIdParam, groupId, companyIds);
+  } = useFiscalYears(companyId || companyIdParam, companyIds);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">
