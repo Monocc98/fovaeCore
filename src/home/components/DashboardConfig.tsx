@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { useFiscalYears } from "@/budget/hooks/useFiscalYears";
 
 interface Props {
