@@ -37,3 +37,8 @@ export const deleteFiscalYearAction = async(idFiscalYear: string) => {
     
     return data;
 }
+
+export const getFiscalYearsAction = async(): Promise<FiscalYear[]> => {
+    const { data } = await fovaeCoreApi.get<{ fiscalYears: FiscalYear[] }>("/fiscalYear");
+    return data.fiscalYears ?? [];
+}

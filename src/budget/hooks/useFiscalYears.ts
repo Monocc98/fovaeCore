@@ -1,35 +1,47 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
-import type { FiscalYear, FiscalYearResponse } from "@/types";
-import { getFiscalYearsByIdCompanyAction } from "@/home/actions/fiscalYear.actions";
+import type { FiscalYear } from "@/types";
+import {
+  getFiscalYearsByIdCompanyAction,
+  getFiscalYearsAction,
+} from "@/home/actions/fiscalYear.actions";
 
 export const useFiscalYears = (companyId?: string) => {
-  const { data, isLoading } = useQuery<FiscalYearResponse[]>({
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Si companyId está definido, consultamos los de la empresa. Si no, consultamos todos los globales.
+  const { data, isLoading } = useQuery({
     queryKey: ["fiscalYears", companyId],
-    queryFn: () => getFiscalYearsByIdCompanyAction(companyId!),
-    enabled: !!companyId,
+    queryFn: async () => {
+      if (companyId) {
+        const links = await getFiscalYearsByIdCompanyAction(companyId);
+        const list = links.map((link: any) => {
+          const fy = link.fiscalYear;
+          return {
+            id: fy.id ?? fy._id,
+            name: fy.name,
+            startDate: new Date(fy.startDate as unknown as string),
+            endDate: fy.endDate ? new Date(fy.endDate as unknown as string) : undefined,
+          } as FiscalYear;
+        });
+        return { links, fiscalYears: list };
+      } else {
+        const list = await getFiscalYearsAction();
+        const fiscalYears = list.map((fy: any) => ({
+          id: fy.id ?? fy._id,
+          name: fy.name,
+          startDate: new Date(fy.startDate as unknown as string),
+          endDate: fy.endDate ? new Date(fy.endDate as unknown as string) : undefined,
+        } as FiscalYear));
+        return { links: [], fiscalYears };
+      }
+    },
     staleTime: 1000 * 60 * 10,
   });
 
-  const [searchParams, setSearchParams] = useSearchParams();
-
-  const links = useMemo(() => data ?? [], [data]);
-
-  // ✅ Normalizamos aquí a FiscalYear[] (usando tus tipos)
-  const fiscalYears = useMemo<FiscalYear[]>(() => {
-    const links = data ?? [];
-    return links.map((link) => {
-      const fy = link.fiscalYear;
-      return {
-        id: fy.id,
-        name: fy.name,
-        // si en tu interfaz FiscalYear usas Date, convierte aquí:
-        startDate: new Date(fy.startDate as unknown as string),
-        endDate: fy.endDate ? new Date(fy.endDate as unknown as string) : (undefined as any),
-      };
-    });
-  }, [data]);
+  const fiscalYears = useMemo(() => data?.fiscalYears ?? [], [data]);
+  const links = useMemo(() => data?.links ?? [], [data]);
 
   // Encontrar el año fiscal predeterminado (el en curso que contiene "hoy")
   const defaultFY = useMemo(() => {
@@ -64,9 +76,8 @@ export const useFiscalYears = (companyId?: string) => {
   );
 
   const activeLink = useMemo(() => {
-    // link.fiscalYear puede venir populated con {id,...}
     return links.find((l: any) => String(l.fiscalYear?.id ?? l.fiscalYear) === selectedFY) ?? null;
   }, [links, selectedFY]);
-  
+
   return { fiscalYears, selectedFY, setSelectedFY, activeFY, activeLink, isLoading };
 };
