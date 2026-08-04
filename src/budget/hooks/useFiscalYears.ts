@@ -57,6 +57,15 @@ export const useFiscalYears = (companyId?: string, companyIds?: string[]) => {
     return list;
   }, [links]);
 
+  // DIAGNÓSTICO EN CONSOLA (F12) PARA VER QUÉ ESTÁ PASANDO EXACTAMENTE
+  console.log("[useFiscalYears - Diagnóstico]", {
+    totalGlobalLinks: allLinks.length,
+    effectiveCompanyId,
+    companyIdsReceived: companyIds,
+    filteredLinksCount: links.length,
+    normalizedFiscalYears: fiscalYears,
+  });
+
   // Encontrar el año fiscal predeterminado (el en curso que contiene "hoy")
   const defaultFY = useMemo(() => {
     if (!fiscalYears.length) return "";
