@@ -171,9 +171,18 @@ export const BrowsePage = () => {
   const fiscalYearId = searchParams.get("fy") ?? undefined;
 
   const companyIds = useMemo(() => {
+    console.log("[BrowsePage - Diagnóstico companyIds]", {
+      overlayExists: !!overlay,
+      groupsCount: overlay?.groups?.length,
+      groupIdParam: groupId,
+      allGroupsInfo: overlay?.groups?.map((g: any) => ({ id: g.id, _id: g._id, name: g.name })),
+    });
     if (!overlay?.groups || !groupId) return [];
     const group = overlay.groups.find((g: any) => String(g.id ?? g._id) === String(groupId));
-    return group?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
+    console.log("[BrowsePage - Grupo Encontrado]", group);
+    const ids = group?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
+    console.log("[BrowsePage - IDs Mapeados]", ids);
+    return ids;
   }, [overlay, groupId]);
 
   const { data: budgetOverlay } = useQuery({
