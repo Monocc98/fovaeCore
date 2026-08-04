@@ -38,10 +38,8 @@ export const deleteFiscalYearAction = async(idFiscalYear: string) => {
     return data;
 }
 
-export const getFiscalYearsByGroupAction = async( idGroup: string ):Promise<FiscalYearResponse[]> => {
-    const { data } = await fovaeCoreApi.get<{ fiscalYear_Companys: FiscalYearResponse[] }>(`/fiscalYearCompany`, {
-      params: { groupId: idGroup }
-    });
+export const getFiscalYearsAllAction = async(): Promise<FiscalYearResponse[]> => {
+    const { data } = await fovaeCoreApi.get<{ fiscalYear_Companys: FiscalYearResponse[] }>(`/fiscalYearCompany`);
 
     return data.fiscalYear_Companys ?? [];
 }

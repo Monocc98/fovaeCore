@@ -15,11 +15,13 @@ import { useFiscalYears } from "@/budget/hooks/useFiscalYears";
 interface Props {
   includeFamily: boolean;
   onIncludeFamilyChange: (checked: boolean) => void;
+  companyIds?: string[];
 }
 
 export const DashboardConfig = ({
   includeFamily,
   onIncludeFamilyChange,
+  companyIds,
 }: Props) => {
   const navigate = useNavigate();
   const { groupId, companyId } = useParams<{
@@ -37,7 +39,7 @@ export const DashboardConfig = ({
     selectedFY,
     setSelectedFY,
     isLoading, // o loadingFY, según lo tengas nombrado en el hook
-  } = useFiscalYears(companyId || companyIdParam, groupId);
+  } = useFiscalYears(companyId || companyIdParam, groupId, companyIds);
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 mt-4">

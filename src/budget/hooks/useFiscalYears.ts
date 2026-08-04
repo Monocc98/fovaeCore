@@ -4,31 +4,41 @@ import { useSearchParams } from "react-router";
 import type { FiscalYear, FiscalYearResponse } from "@/types";
 import {
   getFiscalYearsByIdCompanyAction,
-  getFiscalYearsByGroupAction,
+  getFiscalYearsAllAction,
 } from "@/home/actions/fiscalYear.actions";
 
-export const useFiscalYears = (companyId?: string, groupId?: string) => {
+export const useFiscalYears = (companyId?: string, groupId?: string, companyIds?: string[]) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Si companyId es "general", lo tratamos como undefined para cargar todo el grupo
   const effectiveCompanyId = companyId && companyId !== "general" ? companyId : undefined;
 
-  // Si effectiveCompanyId está definido, consultamos los de la empresa. Si no, consultamos los del grupo.
-  const { data: links = [], isLoading } = useQuery<FiscalYearResponse[]>({
-    queryKey: ["fiscalYears", effectiveCompanyId, groupId],
-    queryFn: async () => {
-      if (effectiveCompanyId) {
-        return getFiscalYearsByIdCompanyAction(effectiveCompanyId);
-      } else if (groupId) {
-        return getFiscalYearsByGroupAction(groupId);
-      }
-      return [];
-    },
-    enabled: !!effectiveCompanyId || !!groupId,
+  // Consultamos todos los mapeos de la BD de forma global (como antes del primer cambio, garantizando que siempre responda)
+  const { data: allLinks = [], isLoading } = useQuery<FiscalYearResponse[]>({
+    queryKey: ["fiscalYearsAll"],
+    queryFn: getFiscalYearsAllAction,
     staleTime: 1000 * 60 * 10,
   });
 
-  // Normalizamos aquí a FiscalYear[] deduplicando por ID
+  // Filtramos las vinculaciones localmente en el cliente
+  const links = useMemo(() => {
+    if (effectiveCompanyId) {
+      // Si estamos en una empresa específica, mostramos solo sus años fiscales
+      return allLinks.filter((link: any) => {
+        const cid = String(link.company?.id ?? link.company?._id ?? link.company);
+        return cid === String(effectiveCompanyId);
+      });
+    } else if (companyIds && companyIds.length > 0) {
+      // Si estamos en la pestaña general del grupo, mostramos los años de las empresas del grupo
+      return allLinks.filter((link: any) => {
+        const cid = String(link.company?.id ?? link.company?._id ?? link.company);
+        return companyIds.includes(cid);
+      });
+    }
+    return [];
+  }, [allLinks, effectiveCompanyId, companyIds]);
+
+  // Normalizamos a FiscalYear[] deduplicando por ID para el selector
   const fiscalYears = useMemo<FiscalYear[]>(() => {
     const seen = new Set<string>();
     const list: FiscalYear[] = [];

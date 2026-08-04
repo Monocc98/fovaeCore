@@ -170,6 +170,12 @@ export const BrowsePage = () => {
 
   const fiscalYearId = searchParams.get("fy") ?? undefined;
 
+  const companyIds = useMemo(() => {
+    if (!overlay?.groups || !groupId) return [];
+    const group = overlay.groups.find((g: any) => String(g.id ?? g._id) === String(groupId));
+    return group?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
+  }, [overlay, groupId]);
+
   const { data: budgetOverlay } = useQuery({
     queryKey: ["budgetOverlay", fiscalYearId],
     queryFn: () => getBudgetVsActualAction(fiscalYearId),
@@ -341,6 +347,7 @@ export const BrowsePage = () => {
         <DashboardConfig
           includeFamily={includeFamily}
           onIncludeFamilyChange={setIncludeFamily}
+          companyIds={companyIds}
         />
         {tabs.map((g) => {
 
