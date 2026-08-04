@@ -10,18 +10,21 @@ import {
 export const useFiscalYears = (companyId?: string, groupId?: string) => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Si companyId está definido, consultamos los de la empresa. Si no, consultamos los del grupo.
+  // Si companyId es "general", lo tratamos como undefined para cargar todo el grupo
+  const effectiveCompanyId = companyId && companyId !== "general" ? companyId : undefined;
+
+  // Si effectiveCompanyId está definido, consultamos los de la empresa. Si no, consultamos los del grupo.
   const { data: links = [], isLoading } = useQuery<FiscalYearResponse[]>({
-    queryKey: ["fiscalYears", companyId, groupId],
+    queryKey: ["fiscalYears", effectiveCompanyId, groupId],
     queryFn: async () => {
-      if (companyId) {
-        return getFiscalYearsByIdCompanyAction(companyId);
+      if (effectiveCompanyId) {
+        return getFiscalYearsByIdCompanyAction(effectiveCompanyId);
       } else if (groupId) {
         return getFiscalYearsByGroupAction(groupId);
       }
       return [];
     },
-    enabled: !!companyId || !!groupId,
+    enabled: !!effectiveCompanyId || !!groupId,
     staleTime: 1000 * 60 * 10,
   });
 
@@ -32,7 +35,7 @@ export const useFiscalYears = (companyId?: string, groupId?: string) => {
     for (const link of links) {
       const fy = link.fiscalYear;
       if (!fy) continue;
-      const id = String(fy.id ?? fy._id);
+      const id = String(fy.id ?? (fy as any)._id);
       if (seen.has(id)) continue;
       seen.add(id);
       list.push({
