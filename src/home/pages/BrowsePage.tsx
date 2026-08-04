@@ -170,21 +170,6 @@ export const BrowsePage = () => {
 
   const fiscalYearId = searchParams.get("fy") ?? undefined;
 
-  const companyIds = useMemo(() => {
-    console.log("[BrowsePage - Diagnóstico companyIds]", {
-      overlayExists: !!overlay,
-      groupsCount: overlay?.groups?.length,
-      groupIdParam: groupId,
-      allGroupsInfo: overlay?.groups?.map((g: any) => ({ id: g.id, _id: g._id, name: g.name })),
-    });
-    if (!overlay?.groups || !groupId) return [];
-    const group = overlay.groups.find((g: any) => String(g.id ?? g._id) === String(groupId));
-    console.log("[BrowsePage - Grupo Encontrado]", group);
-    const ids = group?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
-    console.log("[BrowsePage - IDs Mapeados]", ids);
-    return ids;
-  }, [overlay, groupId]);
-
   const { data: budgetOverlay } = useQuery({
     queryKey: ["budgetOverlay", fiscalYearId],
     queryFn: () => getBudgetVsActualAction(fiscalYearId),
@@ -282,6 +267,21 @@ export const BrowsePage = () => {
     return tabs[0]?.id ?? ""; // fallback: primero
   }, [level, qGroup, qCompany, qAccount, tabs]);
 
+  // companyIds: las empresas del grupo activo (tab activo en nivel grupos, o groupId en nivel empresas)
+  const companyIds = useMemo(() => {
+    if (!overlay?.groups) return [];
+    // Nivel grupos: el tab activo es el grupo → buscamos por activeId
+    if (level === "groups") {
+      const activeGroup = overlay.groups.find((g: any) => String(g.id ?? g._id) === String(activeId));
+      return activeGroup?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
+    }
+    // Nivel empresas: tenemos groupId en la URL
+    if (level === "companies" && groupId) {
+      const group = overlay.groups.find((g: any) => String(g.id ?? g._id) === String(groupId));
+      return group?.companies?.map((c: any) => String(c.id ?? c._id)) ?? [];
+    }
+    return [];
+  }, [overlay, level, activeId, groupId]);
   const currentSummaryNode = useMemo(() => {
     if (!bucketsOverlay?.groups?.length) return null;
 
