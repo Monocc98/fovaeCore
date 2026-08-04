@@ -3,21 +3,27 @@ import type { HomeResponse } from "../../types";
 import { normalizeIdDeep } from "@/helpers";
 
 
-export const getHomeAction = async():Promise<HomeResponse> => {
-    const { data } = await fovaeCoreApi.get<HomeResponse>(`/home`);
+export const getHomeAction = async(fiscalYearId?: string):Promise<HomeResponse> => {
+    const { data } = await fovaeCoreApi.get<HomeResponse>(`/home`, {
+      params: fiscalYearId ? { fiscalYearId } : undefined
+    });
 
     return normalizeIdDeep(data);
 }
 
-export const getBudgetVsActualAction = async () => {
+export const getBudgetVsActualAction = async (fiscalYearId?: string) => {
 
-  const { data } = await fovaeCoreApi.get("/home/budget-vs-actual");
+  const { data } = await fovaeCoreApi.get("/home/budget-vs-actual", {
+    params: fiscalYearId ? { fiscalYearId } : undefined
+  });
   return data;
 };
 
-export const getBucketsSummaryAction = async () => {
+export const getBucketsSummaryAction = async (fiscalYearId?: string) => {
 
-  const { data } = await fovaeCoreApi.get("/home/buckets-summary");
+  const { data } = await fovaeCoreApi.get("/home/buckets-summary", {
+    params: fiscalYearId ? { fiscalYearId } : undefined
+  });
   return data;
 };
 
@@ -80,12 +86,16 @@ export type DividendsResponse = {
 
 export const getGroupDividendsAction = async (
   groupId: string,
-  userId?: string
+  userId?: string,
+  fiscalYearId?: string
 ): Promise<DividendsResponse> => {
   const { data } = await fovaeCoreApi.get<DividendsResponse>(
     `/home/dividends/group/${groupId}`,
     {
-      params: userId ? { userId } : undefined,
+      params: {
+        ...(userId ? { userId } : {}),
+        ...(fiscalYearId ? { fiscalYearId } : {})
+      }
     }
   );
 

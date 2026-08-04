@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router";
 import type { FiscalYear, FiscalYearResponse } from "@/types";
 import { getFiscalYearsByIdCompanyAction } from "@/home/actions/fiscalYear.actions";
 
@@ -10,6 +11,8 @@ export const useFiscalYears = (companyId?: string) => {
     enabled: !!companyId,
     staleTime: 1000 * 60 * 10,
   });
+
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const links = useMemo(() => data ?? [], [data]);
 
@@ -28,12 +31,32 @@ export const useFiscalYears = (companyId?: string) => {
     });
   }, [data]);
 
-  const [selectedFY, setSelectedFY] = useState<string>("");
-
-  useEffect(() => {
-    if (fiscalYears.length) setSelectedFY(String(fiscalYears[0].id));
-    else setSelectedFY("");
+  // Encontrar el año fiscal predeterminado (el en curso que contiene "hoy")
+  const defaultFY = useMemo(() => {
+    if (!fiscalYears.length) return "";
+    const now = new Date();
+    const containingToday = fiscalYears.find((fy) => {
+      const start = new Date(fy.startDate);
+      const end = fy.endDate
+        ? new Date(fy.endDate)
+        : new Date(start.getFullYear() + 1, start.getMonth(), start.getDate());
+      return start <= now && end > now;
+    });
+    if (containingToday) return containingToday.id;
+    return fiscalYears[0].id;
   }, [fiscalYears]);
+
+  const selectedFY = searchParams.get("fy") ?? defaultFY;
+
+  const setSelectedFY = (id: string) => {
+    const sp = new URLSearchParams(searchParams);
+    if (id) {
+      sp.set("fy", id);
+    } else {
+      sp.delete("fy");
+    }
+    setSearchParams(sp, { replace: true });
+  };
 
   const activeFY = useMemo(
     () => fiscalYears.find((f) => f.id === selectedFY) ?? null,

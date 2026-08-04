@@ -75,8 +75,10 @@ export interface ImportBatchSummaryResponse {
   }>;
 }
 
-export const getMovementsAction = async( idAccount: string ):Promise<MovementsByAccountResponse> => {
-    const { data } = await fovaeCoreApi.get<MovementsByAccountResponse>(`/movements/account/${idAccount}`);
+export const getMovementsAction = async( idAccount: string, fiscalYearId?: string ):Promise<MovementsByAccountResponse> => {
+    const { data } = await fovaeCoreApi.get<MovementsByAccountResponse>(`/movements/account/${idAccount}`, {
+      params: fiscalYearId ? { fiscalYearId } : undefined
+    });
 
     return data;
 }

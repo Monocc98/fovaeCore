@@ -3,7 +3,7 @@ import { QueryErrorState } from "@/components/ui/QueryErrorState";
 import { getHomeAction } from "@/home/actions/get-home.action";
 import { HeaderHome } from "@/home/components/HeaderHome";
 import { useQuery } from "@tanstack/react-query";
-import { Outlet } from "react-router";
+import { Outlet, useSearchParams } from "react-router";
 
 export type OutletContext = {
   overlay: Awaited<ReturnType<typeof getHomeAction>>;
@@ -66,6 +66,8 @@ const HomeDashboardSkeleton = () => (
 export const HomeLayoutV2 = () => {
   const { user } = useAuthStore();
   const userId = user?.id;
+  const [searchParams] = useSearchParams();
+  const fiscalYearId = searchParams.get("fy") ?? undefined;
 
   const {
     data: overlay,
@@ -74,8 +76,8 @@ export const HomeLayoutV2 = () => {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["homeOverlay", userId],
-    queryFn: () => getHomeAction(),
+    queryKey: ["homeOverlay", userId, fiscalYearId],
+    queryFn: () => getHomeAction(fiscalYearId),
     enabled: !!userId,
     staleTime: 1000 * 60 * 5,
   });

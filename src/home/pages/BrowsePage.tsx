@@ -168,16 +168,18 @@ export const BrowsePage = () => {
   );
   const [includeFamily, setIncludeFamily] = useState(true);
 
+  const fiscalYearId = searchParams.get("fy") ?? undefined;
+
   const { data: budgetOverlay } = useQuery({
-    queryKey: ["budgetOverlay"],
-    queryFn: getBudgetVsActualAction,
+    queryKey: ["budgetOverlay", fiscalYearId],
+    queryFn: () => getBudgetVsActualAction(fiscalYearId),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
 
   const { data: bucketsOverlay, isLoading: isBucketsLoading } = useQuery({
-    queryKey: ["homeBucketsSummary"],
-    queryFn: getBucketsSummaryAction,
+    queryKey: ["homeBucketsSummary", fiscalYearId],
+    queryFn: () => getBucketsSummaryAction(fiscalYearId),
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
@@ -588,9 +590,12 @@ function AccountsSection({
 }) {
   const { companyId } = useParams<{ companyId: string }>();
 
+  const [searchParams] = useSearchParams();
+  const fiscalYearId = searchParams.get("fy") ?? undefined;
+
   const { data, isLoading } = useQuery({
-    queryKey: ["movementsOverlay", accountId],
-    queryFn: () => getMovementsAction(accountId),
+    queryKey: ["movementsOverlay", accountId, fiscalYearId],
+    queryFn: () => getMovementsAction(accountId, fiscalYearId),
     enabled: !!accountId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

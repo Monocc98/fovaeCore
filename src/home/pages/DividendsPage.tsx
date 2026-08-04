@@ -20,11 +20,12 @@ export const DividendsPage = () => {
   const { groupId } = useParams<{ groupId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedUserId = searchParams.get("userId") ?? undefined;
+  const fiscalYearId = searchParams.get("fy") ?? undefined;
   const backTo = (location.state as any)?.backTo as string | undefined;
 
   const dividendsQuery = useQuery({
-    queryKey: ["groupDividends", groupId, selectedUserId],
-    queryFn: () => getGroupDividendsAction(groupId!, selectedUserId),
+    queryKey: ["groupDividends", groupId, selectedUserId, fiscalYearId],
+    queryFn: () => getGroupDividendsAction(groupId!, selectedUserId, fiscalYearId),
     enabled: !!groupId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

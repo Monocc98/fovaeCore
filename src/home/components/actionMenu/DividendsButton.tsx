@@ -1,15 +1,17 @@
 import { Landmark } from "lucide-react";
-import { useNavigate, useParams } from "react-router";
+import { useNavigate, useParams, useLocation } from "react-router";
 
 export const DividendsButton = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { groupId } = useParams<{ groupId: string }>();
 
   const handleClick = () => {
     if (!groupId) return;
 
     const backTo = location.pathname + location.search;
-    navigate(`/group/${groupId}/dividends`, {
+    const search = location.search;
+    navigate(`/group/${groupId}/dividends${search}`, {
       state: { backTo },
     });
   };

@@ -2,7 +2,7 @@ import { getIncomeBudgetTreeAction } from "@/home/actions/graphics.actions";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router";
 import {
   Bar,
   BarChart,
@@ -251,11 +251,13 @@ export const IncomeBudgetObjectivePage = () => {
     companyId: string;
   }>();
 
+  const [searchParams] = useSearchParams();
+  const fiscalYearId = searchParams.get("fy") ?? undefined;
   const backTo = (location.state as any)?.backTo as string | undefined;
 
   const query = useQuery({
-    queryKey: ["incomeBudgetTree", companyId],
-    queryFn: () => getIncomeBudgetTreeAction(companyId!),
+    queryKey: ["incomeBudgetTree", companyId, fiscalYearId],
+    queryFn: () => getIncomeBudgetTreeAction(companyId!, fiscalYearId),
     enabled: !!companyId,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
