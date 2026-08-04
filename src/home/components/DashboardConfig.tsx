@@ -24,10 +24,11 @@ export const DashboardConfig = ({
   companyIds,
 }: Props) => {
   const navigate = useNavigate();
-  const { groupId, companyId } = useParams<{
-    groupId?: string;
-    companyId?: string;
-  }>();
+  const pathname = window.location.pathname;
+  const groupMatch = pathname.match(/\/group\/([^/]+)/);
+  const companyMatch = pathname.match(/\/company\/([^/]+)/);
+  const groupId = groupMatch ? groupMatch[1] : undefined;
+  const companyId = companyMatch ? companyMatch[1] : undefined;
 
   const [searchParams] = useSearchParams();
 

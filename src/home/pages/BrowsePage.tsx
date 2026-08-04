@@ -142,11 +142,11 @@ export const BrowsePage = () => {
   const qCompany = searchParams.get("c") ?? undefined; // empresa activa (en /v2/group/:groupId)
   const qAccount = searchParams.get("a") ?? undefined; // cuenta activa (en /v2/company/:companyId)
 
-  const { groupId, companyId } = useParams<{
-    groupId?: string;
-    companyId?: string;
-    // accountId?: string;
-  }>();
+  const pathname = window.location.pathname;
+  const groupMatch = pathname.match(/\/group\/([^/]+)/);
+  const companyMatch = pathname.match(/\/company\/([^/]+)/);
+  const groupId = groupMatch ? groupMatch[1] : undefined;
+  const companyId = companyMatch ? companyMatch[1] : undefined;
 
   const level: Level = companyId
     ? "accounts"
