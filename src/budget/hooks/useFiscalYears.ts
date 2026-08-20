@@ -34,7 +34,8 @@ export const useFiscalYears = (companyId?: string, companyIds?: string[]) => {
         return companyIds.includes(cid);
       });
     }
-    return [];
+    // Si estamos en la vista raíz o no se han filtrado empresas, mostramos todos los años fiscales disponibles
+    return allLinks;
   }, [allLinks, effectiveCompanyId, companyIds]);
 
   // Normalizamos a FiscalYear[] deduplicando por ID para el selector
@@ -54,17 +55,19 @@ export const useFiscalYears = (companyId?: string, companyIds?: string[]) => {
         endDate: fy.endDate ? new Date(fy.endDate as unknown as string) : undefined as any,
       });
     }
-    return list;
+    return list.sort(
+      (a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime()
+    );
   }, [links]);
 
-  // Encontrar el año fiscal predeterminado (el en curso que contiene "hoy")
+  // Encontrar el año fiscal predeterminado (el en curso que contiene "hoy" o el más reciente)
   const defaultFY = useMemo(() => {
     if (!fiscalYears.length) return "";
     const now = new Date();
     const containingToday = fiscalYears.find((fy) => {
       const start = new Date(fy.startDate);
       const end = fy.endDate
-        ? new Date(fy.endDate)
+        ? new Date(new Date(fy.endDate).getTime() + 24 * 60 * 60 * 1000)
         : new Date(start.getFullYear() + 1, start.getMonth(), start.getDate());
       return start <= now && end > now;
     });
