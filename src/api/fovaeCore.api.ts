@@ -3,8 +3,10 @@ import type { CsrfPayload } from "@/types";
 import type { AxiosRequestConfig } from "axios";
 import { isAppError, parseAxiosError } from "@/helpers";
 
-const BASE_URL = import.meta.env.VITE_API_URL;
-const DEFAULT_CSRF_HEADER = "x-csrf-token";
+const BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://fovaecoreapi-production.up.railway.app/api";
+console.log("DEBUG API BASE URL:", BASE_URL);
 const CSRF_HEADER_FALLBACK =
   import.meta.env.VITE_CSRF_HEADER_NAME ?? DEFAULT_CSRF_HEADER;
 const CSRF_COOKIE_FALLBACK =

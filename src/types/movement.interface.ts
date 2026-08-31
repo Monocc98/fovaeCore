@@ -12,6 +12,8 @@ export interface Movement {
     subsubcategory:    Subsubcategory;
     tags?:        any[];
     id:          string;
+    externalConceptKey?: string;
+    externalCategoryRaw?: string;
     transferId?: string;
     transfer_id?: string;
     transfer?: unknown;

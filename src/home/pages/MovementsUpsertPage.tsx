@@ -649,6 +649,15 @@ export const MovementsUpsertPage = () => {
                         )?.name}
                     </div>
                   )}
+
+                {isEditing && movement?.externalConceptKey && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800">
+                    <span className="font-semibold">💡 Regla de importación:</span>
+                    <span>
+                      Este movimiento proviene de un archivo importado (Concepto: <strong>{movement.externalCategoryRaw || movement.externalConceptKey}</strong>). Al modificar la categoría, la regla se actualizará automáticamente para futuras importaciones.
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
